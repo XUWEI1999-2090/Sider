@@ -1,27 +1,88 @@
+
 class ScreenshotManager {
     constructor() {
         this.screenshotBtn = document.getElementById('screenshotBtn');
         this.bindEvents();
+        this.isSelecting = false;
+        this.startX = 0;
+        this.startY = 0;
     }
 
     bindEvents() {
-        this.screenshotBtn.addEventListener('click', () => this.takeScreenshot());
+        this.screenshotBtn.addEventListener('click', () => this.initializeSelection());
     }
 
-    async takeScreenshot() {
+    initializeSelection() {
         try {
             if (!chrome || !chrome.tabs || !chrome.permissions) {
                 throw new Error('Chrome APIs not available');
             }
 
-            // Get current active tab
-            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (!tabs || tabs.length === 0) {
-                throw new Error('No active tab found');
-            }
+            // Create selection overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'screenshot-overlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.3);
+                cursor: crosshair;
+                z-index: 999999;
+            `;
 
-            const tab = tabs[0];
+            const selection = document.createElement('div');
+            selection.id = 'screenshot-selection';
+            selection.style.cssText = `
+                position: absolute;
+                border: 2px solid #0095ff;
+                background: rgba(0, 149, 255, 0.1);
+                display: none;
+            `;
 
+            overlay.appendChild(selection);
+            document.body.appendChild(overlay);
+
+            overlay.addEventListener('mousedown', (e) => {
+                this.isSelecting = true;
+                this.startX = e.clientX;
+                this.startY = e.clientY;
+                selection.style.left = `${this.startX}px`;
+                selection.style.top = `${this.startY}px`;
+                selection.style.display = 'block';
+            });
+
+            overlay.addEventListener('mousemove', (e) => {
+                if (!this.isSelecting) return;
+                
+                const currentX = e.clientX;
+                const currentY = e.clientY;
+                
+                const width = currentX - this.startX;
+                const height = currentY - this.startY;
+                
+                selection.style.width = `${Math.abs(width)}px`;
+                selection.style.height = `${Math.abs(height)}px`;
+                selection.style.left = `${width < 0 ? currentX : this.startX}px`;
+                selection.style.top = `${height < 0 ? currentY : this.startY}px`;
+            });
+
+            overlay.addEventListener('mouseup', async (e) => {
+                this.isSelecting = false;
+                const rect = selection.getBoundingClientRect();
+                document.body.removeChild(overlay);
+                await this.captureSelectedArea(rect);
+            });
+
+        } catch (error) {
+            console.error('Screenshot initialization failed:', error);
+            this.displayError('请在Chrome扩展中运行此功能');
+        }
+    }
+
+    async captureSelectedArea(rect) {
+        try {
             // Request screenshot permission if needed
             const granted = await chrome.permissions.request({
                 permissions: ['tabCapture']
@@ -32,6 +93,12 @@ class ScreenshotManager {
             }
 
             // Capture the visible tab
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (!tabs || tabs.length === 0) {
+                throw new Error('No active tab found');
+            }
+
+            const tab = tabs[0];
             const dataUrl = await new Promise((resolve, reject) => {
                 chrome.tabs.captureVisibleTab(
                     tab.windowId,
@@ -46,8 +113,19 @@ class ScreenshotManager {
                 );
             });
 
-            // Display the screenshot
-            await this.displayScreenshot(dataUrl);
+            // Crop the image
+            const img = new Image();
+            img.src = dataUrl;
+            await new Promise(resolve => img.onload = resolve);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, rect.left, rect.top, rect.width, rect.height, 0, 0, rect.width, rect.height);
+            
+            const croppedDataUrl = canvas.toDataURL('image/png');
+            await this.displayScreenshot(croppedDataUrl);
 
         } catch (error) {
             console.error('Screenshot failed:', error);
