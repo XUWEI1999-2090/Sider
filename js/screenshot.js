@@ -10,6 +10,10 @@ class ScreenshotManager {
 
     async takeScreenshot() {
         try {
+            if (!chrome || !chrome.tabs || !chrome.permissions) {
+                throw new Error('Chrome APIs not available');
+            }
+
             // Get current active tab
             const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
             if (!tabs || tabs.length === 0) {
@@ -19,9 +23,13 @@ class ScreenshotManager {
             const tab = tabs[0];
 
             // Request screenshot permission if needed
-            await chrome.permissions.request({
+            const granted = await chrome.permissions.request({
                 permissions: ['tabCapture']
             });
+
+            if (!granted) {
+                throw new Error('Screenshot permission denied');
+            }
 
             // Capture the visible tab
             const dataUrl = await new Promise((resolve, reject) => {
@@ -43,7 +51,10 @@ class ScreenshotManager {
 
         } catch (error) {
             console.error('Screenshot failed:', error);
-            this.displayError('无法获取截图，请确保已授予截图权限。如果问题持续，请刷新页面重试。');
+            const errorMsg = error.message === 'Chrome APIs not available' 
+                ? '请在Chrome扩展中运行此功能' 
+                : '无法获取截图，请确保已授予截图权限。如果问题持续，请刷新页面重试。';
+            this.displayError(errorMsg);
         }
     }
 
