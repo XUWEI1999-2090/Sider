@@ -3,13 +3,12 @@ class ChatManager {
         this.messageForm = document.getElementById('messageForm');
         this.messageInput = document.getElementById('messageInput');
         this.chatMessages = document.getElementById('chatMessages');
-        
+
         this.initializeChat();
         this.bindEvents();
     }
 
     initializeChat() {
-        // Load chat history
         chrome.storage.local.get(['chatHistory'], (result) => {
             if (result.chatHistory) {
                 result.chatHistory.forEach(msg => this.displayMessage(msg.text, msg.type));
@@ -28,16 +27,13 @@ class ChatManager {
         const message = this.messageInput.value.trim();
         if (!message) return;
 
-        // Display user message
         this.displayMessage(message, 'user');
         this.saveMessage(message, 'user');
         this.messageInput.value = '';
 
-        // Show loading indicator
         this.showLoading();
 
         try {
-            // Send message to background script for processing
             const response = await new Promise((resolve) => {
                 chrome.runtime.sendMessage(
                     { type: 'processMessage', message },
@@ -45,7 +41,6 @@ class ChatManager {
                 );
             });
 
-            // Hide loading and display bot response
             this.hideLoading();
             this.displayMessage(response.response, 'bot');
             this.saveMessage(response.response, 'bot');
@@ -59,7 +54,12 @@ class ChatManager {
     displayMessage(text, type) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', `${type}-message`);
-        messageDiv.textContent = text;
+
+        const contentDiv = document.createElement('div');
+        contentDiv.classList.add('message-content');
+        contentDiv.textContent = text;
+
+        messageDiv.appendChild(contentDiv);
         this.chatMessages.appendChild(messageDiv);
         this.scrollToBottom();
     }
@@ -74,12 +74,14 @@ class ChatManager {
 
     showLoading() {
         const loadingDiv = document.createElement('div');
-        loadingDiv.classList.add('loading');
+        loadingDiv.classList.add('message', 'bot-message');
         loadingDiv.innerHTML = `
-            <div class="loading-dots">
-                <span></span>
-                <span style="animation-delay: 0.2s"></span>
-                <span style="animation-delay: 0.4s"></span>
+            <div class="message-content">
+                <div class="loading-dots">
+                    <span></span>
+                    <span style="animation-delay: 0.2s"></span>
+                    <span style="animation-delay: 0.4s"></span>
+                </div>
             </div>
         `;
         this.chatMessages.appendChild(loadingDiv);
@@ -87,7 +89,7 @@ class ChatManager {
     }
 
     hideLoading() {
-        const loadingDiv = this.chatMessages.querySelector('.loading');
+        const loadingDiv = this.chatMessages.querySelector('.loading-dots')?.closest('.message');
         if (loadingDiv) {
             loadingDiv.remove();
         }
@@ -95,8 +97,13 @@ class ChatManager {
 
     displayError(message) {
         const errorDiv = document.createElement('div');
-        errorDiv.classList.add('message', 'bot-message', 'error-message');
-        errorDiv.textContent = message;
+        errorDiv.classList.add('message', 'bot-message');
+
+        const contentDiv = document.createElement('div');
+        contentDiv.classList.add('message-content', 'error-message');
+        contentDiv.textContent = message;
+
+        errorDiv.appendChild(contentDiv);
         this.chatMessages.appendChild(errorDiv);
         this.scrollToBottom();
     }
@@ -106,7 +113,6 @@ class ChatManager {
     }
 }
 
-// Initialize chat when document is loaded
 document.addEventListener('DOMContentLoaded', () => {
     new ChatManager();
 });
