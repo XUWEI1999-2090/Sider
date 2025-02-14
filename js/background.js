@@ -25,14 +25,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     if (request.type === 'captureTab') {
         chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
-            sendResponse({ dataUrl });
+            if (chrome.runtime.lastError) {
+                sendResponse({ error: chrome.runtime.lastError.message });
+            } else {
+                sendResponse({ dataUrl });
+            }
         });
-        return true; 
+        return true;
     }
-});
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === 'screenshot') {
-        chrome.runtime.sendMessage(message);
+    // Handle screenshot requests
+    if (request.type === 'screenshot') {
+        chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
+            if (chrome.runtime.lastError) {
+                sendResponse({ error: chrome.runtime.lastError.message });
+            } else {
+                sendResponse({ dataUrl });
+            }
+        });
+        return true;
     }
 });

@@ -11,26 +11,43 @@ class ScreenshotManager {
     async takeScreenshot() {
         try {
             // Get current active tab
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (!tabs || tabs.length === 0) {
+                throw new Error('No active tab found');
+            }
 
-            // Take screenshot of current tab
-            const response = await new Promise((resolve) => {
+            const tab = tabs[0];
+
+            // Request screenshot permission if needed
+            await chrome.permissions.request({
+                permissions: ['tabCapture']
+            });
+
+            // Capture the visible tab
+            const dataUrl = await new Promise((resolve, reject) => {
                 chrome.tabs.captureVisibleTab(
                     tab.windowId,
                     { format: 'png' },
-                    (dataUrl) => resolve(dataUrl)
+                    (dataUrl) => {
+                        if (chrome.runtime.lastError) {
+                            reject(chrome.runtime.lastError);
+                        } else {
+                            resolve(dataUrl);
+                        }
+                    }
                 );
             });
 
-            this.displayScreenshot(response);
+            // Display the screenshot
+            await this.displayScreenshot(dataUrl);
 
         } catch (error) {
             console.error('Screenshot failed:', error);
-            this.displayError('无法获取截图，请确保已授予截图权限。');
+            this.displayError('无法获取截图，请确保已授予截图权限。如果问题持续，请刷新页面重试。');
         }
     }
 
-    displayScreenshot(dataUrl) {
+    async displayScreenshot(dataUrl) {
         const chatMessages = document.getElementById('chatMessages');
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', 'user-message');
@@ -49,6 +66,17 @@ class ScreenshotManager {
         messageDiv.appendChild(contentDiv);
         chatMessages.appendChild(messageDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // Save screenshot to chat history
+        chrome.storage.local.get(['chatHistory'], (result) => {
+            const history = result.chatHistory || [];
+            history.push({
+                type: 'user',
+                text: '[Screenshot]',
+                imageData: dataUrl
+            });
+            chrome.storage.local.set({ chatHistory: history });
+        });
     }
 
     displayError(message) {
@@ -66,7 +94,6 @@ class ScreenshotManager {
     }
 }
 
-// Initialize screenshot manager when document is loaded
 document.addEventListener('DOMContentLoaded', () => {
     new ScreenshotManager();
 });

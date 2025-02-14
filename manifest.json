@@ -7,7 +7,8 @@
     "storage",
     "activeTab",
     "scripting",
-    "tabs"
+    "tabs",
+    "tabCapture"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -32,6 +33,6 @@
     "type": "module"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; img-src 'self' data: chrome://favicon;"
+    "extension_pages": "script-src 'self'; object-src 'self'; img-src 'self' data: chrome://favicon; connect-src 'self' data:"
   }
 }
