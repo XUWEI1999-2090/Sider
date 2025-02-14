@@ -11,7 +11,11 @@ class ChatManager {
     initializeChat() {
         chrome.storage.local.get(['chatHistory'], (result) => {
             if (result.chatHistory) {
-                result.chatHistory.forEach(msg => this.displayMessage(msg.text, msg.type));
+                result.chatHistory.forEach((msg, index) => {
+                    setTimeout(() => {
+                        this.displayMessage(msg.text, msg.type);
+                    }, index * 100); // 逐个显示消息，每条消息间隔100ms
+                });
             }
         });
     }
@@ -31,7 +35,7 @@ class ChatManager {
         this.saveMessage(message, 'user');
         this.messageInput.value = '';
 
-        this.showLoading();
+        this.showTypingIndicator();
 
         try {
             const response = await new Promise((resolve) => {
@@ -41,12 +45,12 @@ class ChatManager {
                 );
             });
 
-            this.hideLoading();
+            this.hideTypingIndicator();
             this.displayMessage(response.response, 'bot');
             this.saveMessage(response.response, 'bot');
 
         } catch (error) {
-            this.hideLoading();
+            this.hideTypingIndicator();
             this.displayError('Failed to get response. Please try again.');
         }
     }
@@ -72,35 +76,38 @@ class ChatManager {
         });
     }
 
-    showLoading() {
-        const loadingDiv = document.createElement('div');
-        loadingDiv.classList.add('message', 'bot-message');
-        loadingDiv.innerHTML = `
+    showTypingIndicator() {
+        const typingDiv = document.createElement('div');
+        typingDiv.classList.add('message', 'bot-message');
+        typingDiv.innerHTML = `
             <div class="message-content">
-                <div class="loading-dots">
+                <div class="typing-indicator">
                     <span></span>
-                    <span style="animation-delay: 0.2s"></span>
-                    <span style="animation-delay: 0.4s"></span>
+                    <span></span>
+                    <span></span>
                 </div>
             </div>
         `;
-        this.chatMessages.appendChild(loadingDiv);
+        this.chatMessages.appendChild(typingDiv);
         this.scrollToBottom();
     }
 
-    hideLoading() {
-        const loadingDiv = this.chatMessages.querySelector('.loading-dots')?.closest('.message');
-        if (loadingDiv) {
-            loadingDiv.remove();
+    hideTypingIndicator() {
+        const typingDiv = this.chatMessages.querySelector('.typing-indicator')?.closest('.message');
+        if (typingDiv) {
+            typingDiv.classList.add('removing');
+            setTimeout(() => {
+                typingDiv.remove();
+            }, 300); // 等待动画完成后移除元素
         }
     }
 
     displayError(message) {
         const errorDiv = document.createElement('div');
-        errorDiv.classList.add('message', 'bot-message');
+        errorDiv.classList.add('message', 'bot-message', 'error');
 
         const contentDiv = document.createElement('div');
-        contentDiv.classList.add('message-content', 'error-message');
+        contentDiv.classList.add('message-content');
         contentDiv.textContent = message;
 
         errorDiv.appendChild(contentDiv);
