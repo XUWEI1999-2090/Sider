@@ -31,10 +31,12 @@ class ChatManager {
         const message = this.messageInput.value.trim();
         if (!message) return;
 
-        this.displayMessage(message, 'user');
+        // 先显示用户消息
+        await this.displayMessage(message, 'user');
         this.saveMessage(message, 'user');
         this.messageInput.value = '';
 
+        // 显示机器人正在输入的动画
         this.showTypingIndicator();
 
         try {
@@ -45,27 +47,46 @@ class ChatManager {
                 );
             });
 
-            this.hideTypingIndicator();
-            this.displayMessage(response.response, 'bot');
+            // 移除输入指示器并显示回复
+            await this.hideTypingIndicator();
+            await this.displayMessage(response.response, 'bot');
             this.saveMessage(response.response, 'bot');
 
         } catch (error) {
-            this.hideTypingIndicator();
-            this.displayError('Failed to get response. Please try again.');
+            await this.hideTypingIndicator();
+            await this.displayError('Failed to get response. Please try again.');
         }
     }
 
-    displayMessage(text, type) {
-        const messageDiv = document.createElement('div');
-        messageDiv.classList.add('message', `${type}-message`);
+    async displayMessage(text, type) {
+        return new Promise((resolve) => {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', `${type}-message`);
 
-        const contentDiv = document.createElement('div');
-        contentDiv.classList.add('message-content');
-        contentDiv.textContent = text;
+            const contentDiv = document.createElement('div');
+            contentDiv.classList.add('message-content');
+            contentDiv.textContent = text;
 
-        messageDiv.appendChild(contentDiv);
-        this.chatMessages.appendChild(messageDiv);
-        this.scrollToBottom();
+            messageDiv.appendChild(contentDiv);
+            this.chatMessages.appendChild(messageDiv);
+
+            // 添加动画效果
+            requestAnimationFrame(() => {
+                messageDiv.style.opacity = '0';
+                messageDiv.style.transform = 'translateY(20px)';
+
+                requestAnimationFrame(() => {
+                    messageDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                    messageDiv.style.opacity = '1';
+                    messageDiv.style.transform = 'translateY(0)';
+                });
+            });
+
+            this.scrollToBottom();
+
+            // 等待动画完成后解析Promise
+            setTimeout(resolve, 300);
+        });
     }
 
     saveMessage(text, type) {
@@ -92,17 +113,22 @@ class ChatManager {
         this.scrollToBottom();
     }
 
-    hideTypingIndicator() {
-        const typingDiv = this.chatMessages.querySelector('.typing-indicator')?.closest('.message');
-        if (typingDiv) {
-            typingDiv.classList.add('removing');
-            setTimeout(() => {
-                typingDiv.remove();
-            }, 300); // 等待动画完成后移除元素
-        }
+    async hideTypingIndicator() {
+        return new Promise((resolve) => {
+            const typingDiv = this.chatMessages.querySelector('.typing-indicator')?.closest('.message');
+            if (typingDiv) {
+                typingDiv.classList.add('removing');
+                setTimeout(() => {
+                    typingDiv.remove();
+                    resolve();
+                }, 300); // 等待动画完成后移除元素
+            } else {
+                resolve();
+            }
+        });
     }
 
-    displayError(message) {
+    async displayError(message) {
         const errorDiv = document.createElement('div');
         errorDiv.classList.add('message', 'bot-message', 'error');
 
