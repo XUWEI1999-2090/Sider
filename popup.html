@@ -13,11 +13,16 @@
         <div class="chat-container">
             <div class="chat-header">
                 <h5>Simple Chatbot</h5>
-                <button id="settingsBtn" class="btn btn-sm btn-light">
-                    <i data-feather="settings"></i>
-                </button>
+                <div class="header-buttons">
+                    <button id="screenshotBtn" class="btn btn-sm btn-success me-2" title="Take Screenshot">
+                        <i data-feather="camera"></i>
+                    </button>
+                    <button id="settingsBtn" class="btn btn-sm btn-light">
+                        <i data-feather="settings"></i>
+                    </button>
+                </div>
             </div>
-            
+
             <div class="chat-messages" id="chatMessages">
                 <!-- Messages will be inserted here -->
             </div>
@@ -45,6 +50,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script src="js/screenshot.js"></script>
     <script src="js/chat.js"></script>
     <script src="js/popup.js"></script>
 </body>
