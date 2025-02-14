@@ -27,11 +27,11 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npx http-server . -p 3000"
+args = "npx http-server . -p 3000 --cors -c-1"
 waitForPort = 3000
 
 [deployment]
-run = ["sh", "-c", "npx http-server . -p 3000"]
+run = ["sh", "-c", "npx http-server . -p 3000 --cors -c-1"]
 
 [[ports]]
 localPort = 3000
