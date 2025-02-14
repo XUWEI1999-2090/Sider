@@ -12,52 +12,41 @@ class ScreenshotManager {
         try {
             // Get current active tab
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            
-            // Inject screenshot capture script
-            await chrome.scripting.executeScript({
-                target: { tabId: tab.id },
-                function: this.captureVisibleTab
+
+            // Take screenshot of current tab
+            const response = await new Promise((resolve) => {
+                chrome.tabs.captureVisibleTab(
+                    tab.windowId,
+                    { format: 'png' },
+                    (dataUrl) => resolve(dataUrl)
+                );
             });
 
-            // Listen for the screenshot data
-            chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-                if (message.type === 'screenshot') {
-                    this.displayScreenshot(message.data);
-                }
-            });
+            this.displayScreenshot(response);
+
         } catch (error) {
             console.error('Screenshot failed:', error);
-            this.displayError('Failed to take screenshot. Please try again.');
+            this.displayError('无法获取截图，请确保已授予截图权限。');
         }
-    }
-
-    captureVisibleTab() {
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        const scrollWidth = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
-        const scrollHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
-
-        canvas.width = scrollWidth;
-        canvas.height = scrollHeight;
-
-        // Capture the entire page
-        context.drawWindow(window, 0, 0, scrollWidth, scrollHeight, "rgb(255,255,255)");
-
-        // Convert to base64 and send back to extension
-        const screenshot = canvas.toDataURL();
-        chrome.runtime.sendMessage({ type: 'screenshot', data: screenshot });
     }
 
     displayScreenshot(dataUrl) {
         const chatMessages = document.getElementById('chatMessages');
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', 'user-message');
-        
+
+        const contentDiv = document.createElement('div');
+        contentDiv.classList.add('message-content');
+
         const img = document.createElement('img');
         img.src = dataUrl;
         img.classList.add('screenshot-preview');
-        
-        messageDiv.appendChild(img);
+        img.style.maxWidth = '100%';
+        img.style.borderRadius = '8px';
+        img.style.marginTop = '8px';
+
+        contentDiv.appendChild(img);
+        messageDiv.appendChild(contentDiv);
         chatMessages.appendChild(messageDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
@@ -65,8 +54,13 @@ class ScreenshotManager {
     displayError(message) {
         const chatMessages = document.getElementById('chatMessages');
         const errorDiv = document.createElement('div');
-        errorDiv.classList.add('message', 'bot-message', 'error-message');
-        errorDiv.textContent = message;
+        errorDiv.classList.add('message', 'bot-message');
+
+        const contentDiv = document.createElement('div');
+        contentDiv.classList.add('message-content', 'error-message');
+        contentDiv.textContent = message;
+
+        errorDiv.appendChild(contentDiv);
         chatMessages.appendChild(errorDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
