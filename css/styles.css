@@ -528,3 +528,16 @@
   .btn-action [data-feather] {
       margin: -2px;
   }
+
+  .delete-conversation-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    float: right;
+    margin-top: 0;
+    line-height: 1;
+  }
+
+  .delete-conversation-btn [data-feather] {
+    vertical-align: middle;
+  }
