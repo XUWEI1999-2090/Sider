@@ -164,6 +164,13 @@ class ChatManager {
         // 始终进行切换，确保消息正确加载
         this.currentConversationId = id;
         
+        // 保存当前会话ID到存储中
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+            chrome.storage.local.set({'currentConversationId': id});
+        } else {
+            localStorage.setItem('currentConversationId', id);
+        }
+        
         // 更新历史记录列表中的活动状态
         const conversationItems = document.querySelectorAll('.conversation-item');
         conversationItems.forEach(item => {
@@ -427,16 +434,24 @@ class ChatManager {
             item.appendChild(date);
             item.appendChild(deleteBtn);
             
-            // 添加点击事件，确保对话切换功能正常工作
+            // 添加点击事件，重要修复：确保正确绑定conversation.id到事件处理函数中
+            const conversationId = conversation.id; // 使用局部变量保存ID
             item.addEventListener('click', (e) => {
-                console.log(`Clicked on conversation ${conversation.id} with ${messageCount} messages`);
+                console.log(`Clicked on conversation ${conversationId} with ${messageCount} messages`);
                 // 防止事件冒泡，确保只处理一次点击事件
                 e.preventDefault();
                 e.stopPropagation();
-                // 添加明显的视觉反馈
+                
+                // 移除所有项目的活动状态
+                document.querySelectorAll('.conversation-item').forEach(el => {
+                    el.classList.remove('active-conversation');
+                });
+                
+                // 添加当前项目的活动状态
                 item.classList.add('active-conversation');
-                // 切换到选定的对话
-                this.switchConversation(conversation.id);
+                
+                // 切换到选定的对话，使用保存的ID
+                this.switchConversation(conversationId);
             });
             
             container.appendChild(item);

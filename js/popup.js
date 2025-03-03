@@ -79,9 +79,13 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // 确保我们有最新的会话数据
             if (typeof chrome !== 'undefined' && chrome.storage) {
-                chrome.storage.local.get(['conversations'], (result) => {
+                chrome.storage.local.get(['conversations', 'currentConversationId'], (result) => {
                     if (result.conversations && result.conversations.length > 0) {
                         window.chatManager.conversations = result.conversations;
+                    }
+                    
+                    if (result.currentConversationId) {
+                        window.chatManager.currentConversationId = result.currentConversationId;
                     }
                     
                     // 渲染会话列表
@@ -93,6 +97,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         if (noConversationsMsg) noConversationsMsg.style.display = 'block';
                     }
+                    
+                    // 如果当前有打开的面板，确保突出显示当前对话
+                    if (historyPanel.classList.contains('active')) {
+                        setTimeout(() => {
+                            const currentId = window.chatManager.currentConversationId;
+                            if (currentId) {
+                                const currentItem = document.querySelector(`.conversation-item[data-id="${currentId}"]`);
+                                if (currentItem) {
+                                    currentItem.classList.add('active-conversation');
+                                }
+                            }
+                        }, 100);
+                    }
                 });
             } else {
                 // 渲染会话列表
@@ -103,6 +120,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (noConversationsMsg) noConversationsMsg.style.display = 'none';
                 } else {
                     if (noConversationsMsg) noConversationsMsg.style.display = 'block';
+                }
+                
+                // 如果当前有打开的面板，确保突出显示当前对话
+                if (historyPanel.classList.contains('active')) {
+                    setTimeout(() => {
+                        const currentId = window.chatManager.currentConversationId;
+                        if (currentId) {
+                            const currentItem = document.querySelector(`.conversation-item[data-id="${currentId}"]`);
+                            if (currentItem) {
+                                currentItem.classList.add('active-conversation');
+                            }
+                        }
+                    }, 100);
                 }
             }
         }
