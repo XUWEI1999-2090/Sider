@@ -43,14 +43,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // 按钮和面板相关
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsPanel = document.getElementById('settingsPanel');
+    console.log('Settings panel:', settingsPanel);
+    
     const closeSettingsBtn = document.querySelector('.btn-close-settings');
     const darkModeToggle = document.getElementById('darkMode');
     const clearHistoryBtn = document.getElementById('clearHistory');
     const newChatBtn = document.getElementById('newChatBtn');
     const historyBtn = document.getElementById('historyBtn');
+    console.log('History button:', historyBtn);
+    
     const historyPanel = document.getElementById('historyPanel');
+    console.log('History panel:', historyPanel);
+    
     const closeHistoryBtn = document.querySelector('.btn-close-history');
     const conversationsList = document.getElementById('conversationsList');
+    console.log('Conversations list:', conversationsList);
+    
     const noConversationsMsg = document.getElementById('noConversationsMsg');
 
     // 初始化暗色模式
@@ -69,13 +77,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 切换历史记录面板
     function toggleHistory() {
-        historyPanel.classList.toggle('active');
-        // 确保设置面板关闭
-        settingsPanel.classList.remove('active');
-        
-        // 更新历史记录列表
-        if (window.chatManager && conversationsList) {
-            console.log('Rendering conversations to list, count:', window.chatManager.conversations.length);
+        console.log('Toggle history panel called');
+        if (historyPanel) {
+            historyPanel.classList.toggle('active');
+            // 确保设置面板关闭
+            if (settingsPanel) {
+                settingsPanel.classList.remove('active');
+            }
+            
+            // 输出调试信息来检查样式
+            console.log('History panel classList:', historyPanel.classList);
+            
+            // 更新历史记录列表
+            if (window.chatManager && conversationsList) {
+                console.log('Rendering conversations to list, count:', window.chatManager.conversations.length);
             
             // 确保我们有最新的会话数据
             if (typeof chrome !== 'undefined' && chrome.storage) {
