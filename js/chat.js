@@ -7,11 +7,17 @@ class ChatManager {
         this.conversations = [];
         this.currentConversationId = null;
         
+        // 先加载会话数据
         this.loadConversations();
         this.setupEventListeners();
         
-        // We'll create a new conversation in loadConversations if there are no existing ones
-        // This allows us to preserve history while still creating a new chat when needed
+        // 检查是否有当前会话ID，如果没有则创建新会话
+        setTimeout(() => {
+            if (!this.currentConversationId || !this.getConversationById(this.currentConversationId)) {
+                console.log('No valid current conversation, creating a new one');
+                this.createNewConversation();
+            }
+        }, 500);
     }
 
     loadConversations() {
@@ -116,21 +122,33 @@ class ChatManager {
             
             // 清空并重新渲染消息
             if (this.messageContainer) {
+                // 先清空消息容器
                 this.messageContainer.innerHTML = '';
+                
                 if (conversation.messages && conversation.messages.length > 0) {
                     console.log(`Rendering ${conversation.messages.length} messages for conversation ${conversation.id}`);
-                    conversation.messages.forEach(message => this.renderMessage(message));
+                    
+                    // 遍历渲染所有消息
+                    conversation.messages.forEach(message => {
+                        this.renderMessage(message);
+                    });
                 } else {
                     console.log('No messages to render in this conversation');
                 }
-                this.scrollToBottom();
+                
+                // 滚动到底部
+                setTimeout(() => {
+                    this.scrollToBottom();
+                }, 100);
             }
             
             console.log('Loaded conversation:', conversation);
+            return true;
         } else {
             console.warn('Failed to load conversation with ID:', this.currentConversationId);
             // 如果找不到当前对话，创建一个新的
             this.createNewConversation();
+            return false;
         }
     }
 
@@ -143,30 +161,30 @@ class ChatManager {
             return false;
         }
         
-        if (this.currentConversationId !== id) {
-            this.currentConversationId = id;
-            
-            // 更新历史记录列表中的活动状态
-            const conversationItems = document.querySelectorAll('.conversation-item');
-            conversationItems.forEach(item => {
-                item.classList.remove('active-conversation');
-                if (item.dataset.id === id) {
-                    item.classList.add('active-conversation');
-                }
-            });
-            
-            // 加载当前会话的消息
-            this.loadCurrentConversation();
-            
-            // 关闭历史面板
-            const historyPanel = document.getElementById('historyPanel');
-            if (historyPanel) {
-                historyPanel.classList.remove('active');
+        // 始终进行切换，确保消息正确加载
+        this.currentConversationId = id;
+        
+        // 更新历史记录列表中的活动状态
+        const conversationItems = document.querySelectorAll('.conversation-item');
+        conversationItems.forEach(item => {
+            item.classList.remove('active-conversation');
+            if (item.dataset.id === id) {
+                item.classList.add('active-conversation');
             }
-            
-            return true;
+        });
+        
+        console.log(`Loading conversation with ID ${id} and ${conversation.messages ? conversation.messages.length : 0} messages`);
+        
+        // 加载当前会话的消息
+        this.loadCurrentConversation();
+        
+        // 关闭历史面板
+        const historyPanel = document.getElementById('historyPanel');
+        if (historyPanel) {
+            historyPanel.classList.remove('active');
         }
-        return false;
+        
+        return true;
     }
 
     updateConversationTitle(id, firstMessage) {
@@ -410,8 +428,14 @@ class ChatManager {
             item.appendChild(deleteBtn);
             
             // 添加点击事件，确保对话切换功能正常工作
-            item.addEventListener('click', () => {
+            item.addEventListener('click', (e) => {
                 console.log(`Clicked on conversation ${conversation.id} with ${messageCount} messages`);
+                // 防止事件冒泡，确保只处理一次点击事件
+                e.preventDefault();
+                e.stopPropagation();
+                // 添加明显的视觉反馈
+                item.classList.add('active-conversation');
+                // 切换到选定的对话
                 this.switchConversation(conversation.id);
             });
             

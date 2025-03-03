@@ -75,13 +75,35 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 更新历史记录列表
         if (window.chatManager && conversationsList) {
-            window.chatManager.renderConversations(conversationsList);
+            console.log('Rendering conversations to list, count:', window.chatManager.conversations.length);
             
-            // 显示或隐藏"暂无历史对话"消息
-            if (window.chatManager.conversations.length > 0) {
-                if (noConversationsMsg) noConversationsMsg.style.display = 'none';
+            // 确保我们有最新的会话数据
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                chrome.storage.local.get(['conversations'], (result) => {
+                    if (result.conversations && result.conversations.length > 0) {
+                        window.chatManager.conversations = result.conversations;
+                    }
+                    
+                    // 渲染会话列表
+                    window.chatManager.renderConversations(conversationsList);
+                    
+                    // 显示或隐藏"暂无历史对话"消息
+                    if (window.chatManager.conversations.length > 0) {
+                        if (noConversationsMsg) noConversationsMsg.style.display = 'none';
+                    } else {
+                        if (noConversationsMsg) noConversationsMsg.style.display = 'block';
+                    }
+                });
             } else {
-                if (noConversationsMsg) noConversationsMsg.style.display = 'block';
+                // 渲染会话列表
+                window.chatManager.renderConversations(conversationsList);
+                
+                // 显示或隐藏"暂无历史对话"消息
+                if (window.chatManager.conversations.length > 0) {
+                    if (noConversationsMsg) noConversationsMsg.style.display = 'none';
+                } else {
+                    if (noConversationsMsg) noConversationsMsg.style.display = 'block';
+                }
             }
         }
     }
