@@ -22,74 +22,50 @@ class ChatManager {
 
     loadConversations() {
         try {
-            console.log('开始加载会话数据...');
-            
-            // 使用chrome.storage.local而不是localStorage以获得更大的存储容量
+            // Use chrome.storage.local instead of localStorage for larger storage capacity
             if (typeof chrome !== 'undefined' && chrome.storage) {
                 chrome.storage.local.get(['conversations', 'currentConversationId'], (result) => {
-                    console.log('从Chrome Storage加载数据:', result);
+                    console.log('Loading from chrome.storage:', result);
                     
-                    if (result.conversations && Array.isArray(result.conversations) && result.conversations.length > 0) {
-                        console.log(`成功加载 ${result.conversations.length} 个会话数据`);
+                    if (result.conversations && result.conversations.length > 0) {
                         this.conversations = result.conversations;
                         
-                        // 获取当前会话ID
+                        // Get the current conversation ID
                         const currentId = result.currentConversationId;
                         if (currentId && this.getConversationById(currentId)) {
-                            console.log(`使用已存储的当前会话ID: ${currentId}`);
                             this.currentConversationId = currentId;
                             this.loadCurrentConversation();
-                        } else if (this.conversations.length > 0) {
-                            // 如果当前ID无效，使用最新的会话
-                            console.log('当前会话ID无效，使用最新会话');
+                        } else {
+                            // Use the most recent conversation if current ID is not valid
                             this.currentConversationId = this.conversations[0].id;
                             this.loadCurrentConversation();
                         }
-                    } else {
-                        console.log('未找到有效的会话数据，将创建新会话');
-                        this.createNewConversation();
                     }
+                    
+                    // Add debug log to verify data loading
+                    console.log('Loaded conversations:', this.conversations);
                 });
             } else {
-                // 降级使用localStorage进行开发/测试
-                console.log('Chrome Storage不可用，尝试从localStorage加载');
+                // Fallback to localStorage for development/testing
                 const savedConversations = localStorage.getItem('conversations');
-                
                 if (savedConversations) {
-                    try {
-                        const parsedConversations = JSON.parse(savedConversations);
-                        if (Array.isArray(parsedConversations) && parsedConversations.length > 0) {
-                            console.log(`从localStorage加载了 ${parsedConversations.length} 个会话`);
-                            this.conversations = parsedConversations;
-                            
-                            // 从localStorage获取当前会话ID
-                            const currentId = localStorage.getItem('currentConversationId');
-                            if (currentId && this.getConversationById(currentId)) {
-                                console.log(`使用localStorage中的当前会话ID: ${currentId}`);
-                                this.currentConversationId = currentId;
-                                this.loadCurrentConversation();
-                            } else if (this.conversations.length > 0) {
-                                // 如果当前ID无效，使用最新的会话
-                                console.log('当前会话ID无效，使用最新会话');
-                                this.currentConversationId = this.conversations[0].id;
-                                this.loadCurrentConversation();
-                            }
-                        } else {
-                            console.log('localStorage中无有效会话数据，创建新会话');
-                            this.createNewConversation();
-                        }
-                    } catch (e) {
-                        console.error('解析localStorage中的会话数据时出错:', e);
-                        this.createNewConversation();
+                    this.conversations = JSON.parse(savedConversations);
+                    
+                    // Get the current conversation ID from localStorage
+                    const currentId = localStorage.getItem('currentConversationId');
+                    if (currentId && this.getConversationById(currentId)) {
+                        this.currentConversationId = currentId;
+                        this.loadCurrentConversation();
+                    } else if (this.conversations.length > 0) {
+                        // Use the most recent conversation if current ID is not valid
+                        this.currentConversationId = this.conversations[0].id;
+                        this.loadCurrentConversation();
                     }
-                } else {
-                    console.log('localStorage中没有会话数据，创建新会话');
-                    this.createNewConversation();
                 }
             }
         } catch (e) {
-            console.error('加载会话时出错:', e);
-            // 出错时创建新会话
+            console.error('Error loading conversations:', e);
+            // Create a new conversation if there's an error
             this.createNewConversation();
         }
     }
@@ -185,7 +161,7 @@ class ChatManager {
             return false;
         }
         
-        // 设置当前会话ID
+        // 始终进行切换，确保消息正确加载
         this.currentConversationId = id;
         
         // 更新历史记录列表中的活动状态
@@ -199,25 +175,8 @@ class ChatManager {
         
         console.log(`Loading conversation with ID ${id} and ${conversation.messages ? conversation.messages.length : 0} messages`);
         
-        // 确保消息容器存在并且清空
-        if (this.messageContainer) {
-            this.messageContainer.innerHTML = '';
-            
-            // 直接使用会话对象的消息数组进行渲染
-            if (conversation.messages && conversation.messages.length > 0) {
-                conversation.messages.forEach(message => {
-                    this.renderMessage(message);
-                });
-                this.scrollToBottom();
-            }
-        }
-        
-        // 保存当前会话ID到存储中
-        if (typeof chrome !== 'undefined' && chrome.storage) {
-            chrome.storage.local.set({'currentConversationId': id});
-        } else {
-            localStorage.setItem('currentConversationId', id);
-        }
+        // 加载当前会话的消息
+        this.loadCurrentConversation();
         
         // 关闭历史面板
         const historyPanel = document.getElementById('historyPanel');
@@ -409,7 +368,6 @@ class ChatManager {
     renderConversations(container) {
         if (!container) return;
         
-        // 清空容器
         container.innerHTML = '';
         
         // 检查是否有对话
@@ -422,7 +380,7 @@ class ChatManager {
             return;
         }
         
-        console.log('Rendering conversations, count:', this.conversations.length);
+        console.log('Rendering conversations:', this.conversations.length);
         
         // 隐藏"暂无历史对话"消息
         const noConversationsMsg = document.getElementById('noConversationsMsg');
@@ -436,9 +394,6 @@ class ChatManager {
                 console.warn('Invalid conversation object:', conversation);
                 return;
             }
-            
-            // 调试信息
-            console.log(`Rendering conversation: ${conversation.id}, title: ${conversation.title}, messages: ${conversation.messages ? conversation.messages.length : 0}`);
             
             // 计算消息数量，用于显示会话信息
             const messageCount = conversation.messages ? conversation.messages.length : 0;
@@ -460,7 +415,6 @@ class ChatManager {
             deleteBtn.className = 'btn btn-sm btn-outline-danger delete-conversation-btn';
             deleteBtn.innerHTML = '<i data-feather="trash-2"></i>';
             deleteBtn.style.float = 'right';
-            deleteBtn.setAttribute('title', '删除此对话');
             deleteBtn.onclick = (e) => {
                 e.stopPropagation(); // 阻止事件冒泡，避免触发对话切换
                 if (confirm('确定要删除此对话吗？')) {
@@ -473,15 +427,17 @@ class ChatManager {
             item.appendChild(date);
             item.appendChild(deleteBtn);
             
-            // 为整个对话项添加点击事件
-            item.onclick = (e) => {
-                console.log(`Clicking conversation ${conversation.id} with ${messageCount} messages`);
+            // 添加点击事件，确保对话切换功能正常工作
+            item.addEventListener('click', (e) => {
+                console.log(`Clicked on conversation ${conversation.id} with ${messageCount} messages`);
+                // 防止事件冒泡，确保只处理一次点击事件
                 e.preventDefault();
                 e.stopPropagation();
-                
-                // 切换到此对话
+                // 添加明显的视觉反馈
+                item.classList.add('active-conversation');
+                // 切换到选定的对话
                 this.switchConversation(conversation.id);
-            };
+            });
             
             container.appendChild(item);
         });
