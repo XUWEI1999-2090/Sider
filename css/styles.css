@@ -533,11 +533,21 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    float: right;
-    margin-top: 0;
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
     line-height: 1;
   }
 
   .delete-conversation-btn [data-feather] {
     vertical-align: middle;
+  }
+  
+  .conversation-item {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
   }
