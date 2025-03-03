@@ -16,27 +16,48 @@ class ChatManager {
 
     loadConversations() {
         try {
-            const savedConversations = localStorage.getItem('conversations');
-            if (savedConversations) {
-                this.conversations = JSON.parse(savedConversations);
-                
-                // Get the current conversation ID from localStorage
-                const currentId = localStorage.getItem('currentConversationId');
-                if (currentId && this.getConversationById(currentId)) {
-                    this.currentConversationId = currentId;
-                    this.loadCurrentConversation();
-                } else if (this.conversations.length > 0) {
-                    // Use the most recent conversation if current ID is not valid
-                    this.currentConversationId = this.conversations[0].id;
-                    this.loadCurrentConversation();
+            // 使用chrome.storage API替代localStorage
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                chrome.storage.local.get(['conversations', 'currentConversationId'], (result) => {
+                    if (result.conversations) {
+                        this.conversations = result.conversations;
+                        
+                        // 获取当前会话ID
+                        if (result.currentConversationId && this.getConversationById(result.currentConversationId)) {
+                            this.currentConversationId = result.currentConversationId;
+                            this.loadCurrentConversation();
+                        } else if (this.conversations.length > 0) {
+                            // 如果当前ID无效，使用最近的会话
+                            this.currentConversationId = this.conversations[0].id;
+                            this.loadCurrentConversation();
+                        }
+                    }
+                    
+                    // 添加调试日志验证数据加载
+                    console.log('Loaded conversations from chrome.storage:', this.conversations);
+                });
+            } else {
+                // 后备到localStorage (非Chrome环境)
+                const savedConversations = localStorage.getItem('conversations');
+                if (savedConversations) {
+                    this.conversations = JSON.parse(savedConversations);
+                    
+                    // 从localStorage获取当前会话ID
+                    const currentId = localStorage.getItem('currentConversationId');
+                    if (currentId && this.getConversationById(currentId)) {
+                        this.currentConversationId = currentId;
+                        this.loadCurrentConversation();
+                    } else if (this.conversations.length > 0) {
+                        // 如果当前ID无效，使用最近的会话
+                        this.currentConversationId = this.conversations[0].id;
+                        this.loadCurrentConversation();
+                    }
+                    console.log('Loaded conversations from localStorage:', this.conversations);
                 }
             }
-            
-            // Add debug log to verify data loading
-            console.log('Loaded conversations:', this.conversations);
         } catch (e) {
             console.error('Error loading conversations:', e);
-            // Create a new conversation if there's an error
+            // 出错时创建新会话
             this.createNewConversation();
         }
     }
@@ -208,20 +229,57 @@ class ChatManager {
 
     saveConversations() {
         try {
-            // Clone the conversations to ensure we have a clean object
+            // 克隆会话以确保有一个干净的对象
             const conversationsToSave = JSON.parse(JSON.stringify(this.conversations));
-            localStorage.setItem('conversations', JSON.stringify(conversationsToSave));
-            localStorage.setItem('currentConversationId', this.currentConversationId);
             
-            // Log success message with data size
-            const dataSize = JSON.stringify(conversationsToSave).length;
-            console.log(`Saved ${this.conversations.length} conversations (${dataSize} bytes)`);
+            // 修剪会话数量限制 - 防止存储空间不足
+            const MAX_CONVERSATIONS = 50;
+            const conversationsToKeep = conversationsToSave.slice(0, MAX_CONVERSATIONS);
+            
+            // 使用chrome.storage API存储数据
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                chrome.storage.local.set({
+                    'conversations': conversationsToKeep,
+                    'currentConversationId': this.currentConversationId
+                }, () => {
+                    if (chrome.runtime.lastError) {
+                        console.error('Chrome storage error:', chrome.runtime.lastError);
+                    } else {
+                        const dataSize = JSON.stringify(conversationsToKeep).length;
+                        console.log(`Saved ${conversationsToKeep.length} conversations to chrome.storage (${dataSize} bytes)`);
+                    }
+                });
+            } else {
+                // 后备到localStorage (非Chrome环境)
+                localStorage.setItem('conversations', JSON.stringify(conversationsToKeep));
+                localStorage.setItem('currentConversationId', this.currentConversationId);
+                
+                const dataSize = JSON.stringify(conversationsToKeep).length;
+                console.log(`Saved ${conversationsToKeep.length} conversations to localStorage (${dataSize} bytes)`);
+            }
+            
+            // 如果原来有过多会话，通知用户已清理
+            if (conversationsToSave.length > MAX_CONVERSATIONS) {
+                console.warn(`Limited to ${MAX_CONVERSATIONS} conversations to prevent storage issues.`);
+            }
         } catch (err) {
             console.error('Error saving conversations:', err);
-            // Show alert for users when saving fails
+            // 存储失败时显示警告
             if (err.name === 'QuotaExceededError') {
-                console.warn('LocalStorage quota exceeded. Try clearing some history.');
+                console.warn('Storage quota exceeded. Automatically cleaned up old conversations.');
+                // 尝试自动清理
+                this.autoCleanConversations();
             }
+        }
+    }
+    
+    // 添加自动清理功能以防止存储空间不足
+    autoCleanConversations() {
+        if (this.conversations.length > 10) {
+            // 保留10个最新的会话
+            this.conversations = this.conversations.slice(0, 10);
+            this.saveConversations();
+            console.log('Auto-cleaned conversations to prevent storage issues.');
         }
     }
 
@@ -310,12 +368,23 @@ class ChatManager {
     clearHistory() {
         this.conversations = [];
         this.currentConversationId = null;
-        localStorage.removeItem('conversations');
-        localStorage.removeItem('currentConversationId');
+        
+        // 使用chrome.storage API清除数据
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+            chrome.storage.local.remove(['conversations', 'currentConversationId'], () => {
+                console.log('Cleared conversation history from chrome.storage');
+            });
+        } else {
+            // 后备到localStorage (非Chrome环境)
+            localStorage.removeItem('conversations');
+            localStorage.removeItem('currentConversationId');
+            console.log('Cleared conversation history from localStorage');
+        }
+        
         if (this.messageContainer) {
             this.messageContainer.innerHTML = '';
         }
-        // Create a new conversation after clearing
+        // 清理后创建新会话
         this.createNewConversation();
     }
 }
