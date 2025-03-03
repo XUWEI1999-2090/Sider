@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Assistant</title>
+    <link href="lib/bootstrap.min.css" rel="stylesheet">
+    <link href="lib/feather.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="sidebar">
+    <div class="sidebar-container">
+        <div class="chat-container">
+            <!-- Header -->
+            <div class="chat-header">
+                <h5 class="mb-0 d-flex align-items-center">
+                    <i data-feather="message-square" class="me-2"></i>
+                    AI Chat Assistant
+                </h5>
+                <button id="settingsBtn" class="btn btn-icon">
+                    <i data-feather="settings"></i>
+                </button>
+            </div>
+
+            <!-- Chat Messages Area -->
+            <div id="chatMessages" class="chat-messages">
+                <!-- Messages will be dynamically inserted here -->
+            </div>
+
+            <!-- Attachment Preview Area -->
+            <div id="attachmentPreview" class="attachment-preview d-none">
+                <div class="preview-container" id="previewContainer"></div>
+            </div>
+            
+            <!-- Input Area -->
+            <div class="chat-input-container">
+                <form id="messageForm" class="message-form">
+                    <div class="input-group">
+                        <input 
+                            type="text" 
+                            id="messageInput" 
+                            class="form-control message-input" 
+                            placeholder="输入您的问题..."
+                            autocomplete="off"
+                        >
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-action" id="screenshotBtn" title="全屏截图">
+                                <i data-feather="camera"></i>
+                            </button>
+                            <button type="button" class="btn btn-action" id="manualScreenshotBtn" title="区域截图">
+                                <i data-feather="crop"></i>
+                            </button>
+                            <button type="submit" class="btn btn-primary btn-send">
+                                <i data-feather="send"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-header">
+            <h6 class="mb-0">设置</h6>
+            <button class="btn btn-icon btn-close-settings">
+                <i data-feather="x"></i>
+            </button>
+        </div>
+        <div class="settings-content">
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="darkMode">
+                <label class="form-check-label" for="darkMode">深色模式</label>
+            </div>
+            <button id="clearHistory" class="btn btn-danger btn-sm w-100">
+                <i data-feather="trash-2" class="me-1"></i>
+                清除聊天记录
+            </button>
+        </div>
+    </div>
+
+    <script src="lib/bootstrap.bundle.min.js"></script>
+    <script src="lib/feather.min.js"></script>
+    <script src="js/screenshot.js"></script>
+    <script src="js/manual-screenshot.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/popup.js"></script>
+</body>
+</html>

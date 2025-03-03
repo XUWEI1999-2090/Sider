@@ -1,0 +1,40 @@
+modules = ["nodejs-20", "web", "nix", "python-3.11"]
+run = "node index.js"
+
+[nix]
+channel = "stable-24_05"
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["sh", "-c", "node index.js"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Project Server"
+
+[[workflows.workflow]]
+name = "Project Server"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx http-server . -p 3000 --cors -c-1"
+waitForPort = 3000
+
+[[ports]]
+localPort = 3000
+externalPort = 80
