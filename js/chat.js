@@ -4,21 +4,39 @@ class ChatManager {
         this.messageContainer = document.getElementById('chatMessages');
         this.messageForm = document.getElementById('messageForm');
         this.messageInput = document.getElementById('messageInput');
-        this.messages = [];
+        this.conversations = [];
+        this.currentConversationId = null;
         
-        this.loadMessages();
+        this.loadConversations();
         this.setupEventListeners();
+        
+        // Create a new conversation when the page loads
+        if (!this.currentConversationId) {
+            this.createNewConversation();
+        }
     }
 
-    loadMessages() {
+    loadConversations() {
         try {
-            const savedMessages = localStorage.getItem('messages');
-            if (savedMessages) {
-                this.messages = JSON.parse(savedMessages);
-                this.renderMessages();
+            const savedConversations = localStorage.getItem('conversations');
+            if (savedConversations) {
+                this.conversations = JSON.parse(savedConversations);
+                
+                // Get the current conversation ID from localStorage
+                const currentId = localStorage.getItem('currentConversationId');
+                if (currentId && this.getConversationById(currentId)) {
+                    this.currentConversationId = currentId;
+                    this.loadCurrentConversation();
+                } else if (this.conversations.length > 0) {
+                    // Use the most recent conversation if current ID is not valid
+                    this.currentConversationId = this.conversations[0].id;
+                    this.loadCurrentConversation();
+                }
             }
         } catch (e) {
-            console.error('Error loading messages:', e);
+            console.error('Error loading conversations:', e);
+            // Create a new conversation if there's an error
+            this.createNewConversation();
         }
     }
 
@@ -36,6 +54,65 @@ class ChatManager {
         });
     }
 
+    createNewConversation() {
+        const newConversation = {
+            id: this.generateId(),
+            title: '新对话',
+            messages: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        // Add to beginning of array (most recent first)
+        this.conversations.unshift(newConversation);
+        this.currentConversationId = newConversation.id;
+        
+        this.saveConversations();
+        this.loadCurrentConversation();
+        return newConversation;
+    }
+
+    generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    }
+
+    getConversationById(id) {
+        return this.conversations.find(conv => conv.id === id);
+    }
+
+    loadCurrentConversation() {
+        const conversation = this.getConversationById(this.currentConversationId);
+        if (conversation) {
+            localStorage.setItem('currentConversationId', this.currentConversationId);
+            if (this.messageContainer) {
+                this.messageContainer.innerHTML = '';
+                conversation.messages.forEach(message => this.renderMessage(message));
+                this.scrollToBottom();
+            }
+        }
+    }
+
+    switchConversation(id) {
+        if (this.currentConversationId !== id) {
+            this.currentConversationId = id;
+            this.loadCurrentConversation();
+            return true;
+        }
+        return false;
+    }
+
+    updateConversationTitle(id, firstMessage) {
+        const conversation = this.getConversationById(id);
+        if (conversation && conversation.title === '新对话' && firstMessage) {
+            // Set the title to the first few characters of the first message
+            const maxTitleLength = 20;
+            conversation.title = firstMessage.length > maxTitleLength 
+                ? firstMessage.substring(0, maxTitleLength) + '...' 
+                : firstMessage;
+            this.saveConversations();
+        }
+    }
+
     async handleMessageSubmit() {
         const content = this.messageInput.value.trim();
         const hasAttachments = window.screenshots && window.screenshots.length > 0;
@@ -51,8 +128,20 @@ class ChatManager {
             timestamp: new Date().toISOString()
         };
 
-        this.messages.push(userMessage);
-        this.saveMessages();
+        // Get current conversation
+        const conversation = this.getConversationById(this.currentConversationId);
+        if (!conversation) return;
+        
+        // Update conversation
+        conversation.messages.push(userMessage);
+        conversation.updatedAt = new Date().toISOString();
+        
+        // Update title if this is the first message
+        if (conversation.messages.length === 1) {
+            this.updateConversationTitle(this.currentConversationId, content);
+        }
+        
+        this.saveConversations();
         this.renderMessage(userMessage);
         this.messageInput.value = '';
         this.messageInput.style.height = 'auto';
@@ -82,8 +171,10 @@ class ChatManager {
                 timestamp: new Date().toISOString()
             };
 
-            this.messages.push(aiMessage);
-            this.saveMessages();
+            // Update current conversation with AI response
+            conversation.messages.push(aiMessage);
+            conversation.updatedAt = new Date().toISOString();
+            this.saveConversations();
             this.renderMessage(aiMessage);
         } catch (err) {
             console.error('Error calling LLM API:', err);
@@ -92,8 +183,8 @@ class ChatManager {
                 sender: 'assistant',
                 timestamp: new Date().toISOString()
             };
-            this.messages.push(errorMessage);
-            this.saveMessages();
+            conversation.messages.push(errorMessage);
+            this.saveConversations();
             this.renderMessage(errorMessage);
         }
         
@@ -114,11 +205,12 @@ class ChatManager {
         this.scrollToBottom();
     }
 
-    saveMessages() {
+    saveConversations() {
         try {
-            localStorage.setItem('messages', JSON.stringify(this.messages));
+            localStorage.setItem('conversations', JSON.stringify(this.conversations));
+            localStorage.setItem('currentConversationId', this.currentConversationId);
         } catch (err) {
-            console.error('Error saving messages:', err);
+            console.error('Error saving conversations:', err);
         }
     }
 
@@ -163,11 +255,39 @@ class ChatManager {
         this.messageContainer.appendChild(messageElement);
     }
 
-    renderMessages() {
-        if (!this.messageContainer) return;
-        this.messageContainer.innerHTML = '';
-        this.messages.forEach(message => this.renderMessage(message));
-        this.scrollToBottom();
+    renderConversations(container) {
+        if (!container || !this.conversations.length) return;
+        
+        container.innerHTML = '';
+        
+        this.conversations.forEach(conversation => {
+            const item = document.createElement('div');
+            item.className = `conversation-item ${conversation.id === this.currentConversationId ? 'active-conversation' : ''}`;
+            item.dataset.id = conversation.id;
+            
+            const title = document.createElement('div');
+            title.className = 'conversation-title';
+            title.textContent = conversation.title;
+            
+            const date = document.createElement('div');
+            date.className = 'conversation-date';
+            date.textContent = this.formatDate(conversation.updatedAt);
+            
+            item.appendChild(title);
+            item.appendChild(date);
+            container.appendChild(item);
+        });
+    }
+    
+    formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString('zh-CN', { 
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     }
 
     scrollToBottom() {
@@ -177,9 +297,15 @@ class ChatManager {
     }
 
     clearHistory() {
-        this.messages = [];
-        this.messageContainer.innerHTML = '';
-        localStorage.removeItem('messages');
+        this.conversations = [];
+        this.currentConversationId = null;
+        localStorage.removeItem('conversations');
+        localStorage.removeItem('currentConversationId');
+        if (this.messageContainer) {
+            this.messageContainer.innerHTML = '';
+        }
+        // Create a new conversation after clearing
+        this.createNewConversation();
     }
 }
 

@@ -37,12 +37,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // 设置按钮相关
+    // 按钮和面板相关
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsPanel = document.getElementById('settingsPanel');
     const closeSettingsBtn = document.querySelector('.btn-close-settings');
     const darkModeToggle = document.getElementById('darkMode');
     const clearHistoryBtn = document.getElementById('clearHistory');
+    const newChatBtn = document.getElementById('newChatBtn');
+    const historyBtn = document.getElementById('historyBtn');
+    const historyPanel = document.getElementById('historyPanel');
+    const closeHistoryBtn = document.querySelector('.btn-close-history');
+    const conversationsList = document.getElementById('conversationsList');
+    const noConversationsMsg = document.getElementById('noConversationsMsg');
 
     // 初始化暗色模式
     const isDarkMode = localStorage.getItem('darkMode') === 'true';
@@ -54,6 +60,37 @@ document.addEventListener('DOMContentLoaded', () => {
     // 切换设置面板
     function toggleSettings() {
         settingsPanel.classList.toggle('active');
+        // 确保历史面板关闭
+        historyPanel.classList.remove('active');
+    }
+    
+    // 切换历史记录面板
+    function toggleHistory() {
+        historyPanel.classList.toggle('active');
+        // 确保设置面板关闭
+        settingsPanel.classList.remove('active');
+        
+        // 更新历史记录列表
+        if (window.chatManager && conversationsList) {
+            window.chatManager.renderConversations(conversationsList);
+            
+            // 显示或隐藏"暂无历史对话"消息
+            if (window.chatManager.conversations.length > 0) {
+                if (noConversationsMsg) noConversationsMsg.style.display = 'none';
+            } else {
+                if (noConversationsMsg) noConversationsMsg.style.display = 'block';
+            }
+        }
+    }
+    
+    // 新建对话
+    function createNewChat() {
+        if (window.chatManager) {
+            window.chatManager.createNewConversation();
+            
+            // 关闭历史面板
+            historyPanel.classList.remove('active');
+        }
     }
 
     // 绑定设置按钮事件
@@ -62,6 +99,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (closeSettingsBtn) {
         closeSettingsBtn.addEventListener('click', toggleSettings);
+    }
+    
+    // 绑定历史按钮事件
+    if (historyBtn) {
+        historyBtn.addEventListener('click', toggleHistory);
+    }
+    if (closeHistoryBtn) {
+        closeHistoryBtn.addEventListener('click', toggleHistory);
+    }
+    
+    // 绑定新建对话按钮事件
+    if (newChatBtn) {
+        newChatBtn.addEventListener('click', createNewChat);
+    }
+    
+    // 绑定对话列表点击事件
+    if (conversationsList) {
+        conversationsList.addEventListener('click', (e) => {
+            const conversationItem = e.target.closest('.conversation-item');
+            if (conversationItem) {
+                const conversationId = conversationItem.dataset.id;
+                if (window.chatManager && conversationId) {
+                    const switched = window.chatManager.switchConversation(conversationId);
+                    if (switched) {
+                        // Close the history panel
+                        historyPanel.classList.remove('active');
+                    }
+                }
+            }
+        });
     }
 
     // 暗色模式切换

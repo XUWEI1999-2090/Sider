@@ -17,9 +17,17 @@
                     <i data-feather="message-square" class="me-2"></i>
                     AI Chat Assistant
                 </h5>
-                <button id="settingsBtn" class="btn btn-icon">
-                    <i data-feather="settings"></i>
-                </button>
+                <div class="d-flex">
+                    <button id="newChatBtn" class="btn btn-icon me-2" title="新建对话">
+                        <i data-feather="plus-circle"></i>
+                    </button>
+                    <button id="historyBtn" class="btn btn-icon me-2" title="历史记录">
+                        <i data-feather="clock"></i>
+                    </button>
+                    <button id="settingsBtn" class="btn btn-icon">
+                        <i data-feather="settings"></i>
+                    </button>
+                </div>
             </div>
 
             <!-- Chat Messages Area -->
@@ -77,6 +85,22 @@
                 <i data-feather="trash-2" class="me-1"></i>
                 清除聊天记录
             </button>
+        </div>
+    </div>
+
+    <!-- History Panel -->
+    <div class="settings-panel" id="historyPanel">
+        <div class="settings-header">
+            <h6 class="mb-0">历史对话</h6>
+            <button class="btn btn-icon btn-close-history">
+                <i data-feather="x"></i>
+            </button>
+        </div>
+        <div class="settings-content">
+            <div id="conversationsList" class="conversation-list"></div>
+            <div class="text-center mt-3" id="noConversationsMsg">
+                暂无历史对话记录
+            </div>
         </div>
     </div>
 
