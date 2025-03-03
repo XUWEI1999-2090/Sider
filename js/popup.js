@@ -69,37 +69,55 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 切换历史记录面板
     function toggleHistory() {
+        const isActive = historyPanel.classList.contains('active');
         historyPanel.classList.toggle('active');
+        
         // 确保设置面板关闭
         settingsPanel.classList.remove('active');
         
-        // 更新历史记录列表
-        if (window.chatManager && conversationsList) {
-            console.log('Rendering conversations to list, count:', window.chatManager.conversations.length);
+        // 如果是打开历史面板，则更新历史记录列表
+        if (!isActive && window.chatManager && conversationsList) {
+            console.log('打开历史面板，正在加载历史数据...');
             
             // 确保我们有最新的会话数据
             if (typeof chrome !== 'undefined' && chrome.storage) {
                 chrome.storage.local.get(['conversations'], (result) => {
-                    if (result.conversations && result.conversations.length > 0) {
+                    console.log('从Chrome Storage加载会话数据:', result);
+                    
+                    if (result.conversations && Array.isArray(result.conversations)) {
                         window.chatManager.conversations = result.conversations;
+                        console.log(`已加载 ${result.conversations.length} 个会话`);
+                    } else {
+                        console.log('未找到会话数据或数据格式不正确');
                     }
                     
                     // 渲染会话列表
                     window.chatManager.renderConversations(conversationsList);
                     
                     // 显示或隐藏"暂无历史对话"消息
-                    if (window.chatManager.conversations.length > 0) {
+                    if (window.chatManager.conversations && window.chatManager.conversations.length > 0) {
                         if (noConversationsMsg) noConversationsMsg.style.display = 'none';
                     } else {
                         if (noConversationsMsg) noConversationsMsg.style.display = 'block';
                     }
                 });
             } else {
+                // 从localStorage加载数据
+                const savedConversations = localStorage.getItem('conversations');
+                if (savedConversations) {
+                    try {
+                        window.chatManager.conversations = JSON.parse(savedConversations);
+                        console.log(`从localStorage加载了 ${window.chatManager.conversations.length} 个会话`);
+                    } catch (e) {
+                        console.error('解析会话数据时出错:', e);
+                    }
+                }
+                
                 // 渲染会话列表
                 window.chatManager.renderConversations(conversationsList);
                 
                 // 显示或隐藏"暂无历史对话"消息
-                if (window.chatManager.conversations.length > 0) {
+                if (window.chatManager.conversations && window.chatManager.conversations.length > 0) {
                     if (noConversationsMsg) noConversationsMsg.style.display = 'none';
                 } else {
                     if (noConversationsMsg) noConversationsMsg.style.display = 'block';
