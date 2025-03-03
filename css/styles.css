@@ -318,7 +318,10 @@
   
   #historyPanel.active {
       transform: translateX(0);
-  }on-speed) ease;
+  }
+  
+  .btn-icon {
+      transition: all var(--transition-speed) ease;
       border-radius: 50%;
   }
   
