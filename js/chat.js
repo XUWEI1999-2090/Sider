@@ -118,7 +118,10 @@ class ChatManager {
             if (this.messageContainer) {
                 this.messageContainer.innerHTML = '';
                 if (conversation.messages && conversation.messages.length > 0) {
+                    console.log(`Rendering ${conversation.messages.length} messages for conversation ${conversation.id}`);
                     conversation.messages.forEach(message => this.renderMessage(message));
+                } else {
+                    console.log('No messages to render in this conversation');
                 }
                 this.scrollToBottom();
             }
@@ -126,6 +129,8 @@ class ChatManager {
             console.log('Loaded conversation:', conversation);
         } else {
             console.warn('Failed to load conversation with ID:', this.currentConversationId);
+            // 如果找不到当前对话，创建一个新的
+            this.createNewConversation();
         }
     }
 
@@ -140,7 +145,6 @@ class ChatManager {
         
         if (this.currentConversationId !== id) {
             this.currentConversationId = id;
-            this.loadCurrentConversation();
             
             // 更新历史记录列表中的活动状态
             const conversationItems = document.querySelectorAll('.conversation-item');
@@ -150,6 +154,15 @@ class ChatManager {
                     item.classList.add('active-conversation');
                 }
             });
+            
+            // 加载当前会话的消息
+            this.loadCurrentConversation();
+            
+            // 关闭历史面板
+            const historyPanel = document.getElementById('historyPanel');
+            if (historyPanel) {
+                historyPanel.classList.remove('active');
+            }
             
             return true;
         }
@@ -364,6 +377,9 @@ class ChatManager {
                 return;
             }
             
+            // 计算消息数量，用于显示会话信息
+            const messageCount = conversation.messages ? conversation.messages.length : 0;
+            
             const item = document.createElement('div');
             item.className = `conversation-item ${conversation.id === this.currentConversationId ? 'active-conversation' : ''}`;
             item.dataset.id = conversation.id;
@@ -374,7 +390,7 @@ class ChatManager {
             
             const date = document.createElement('div');
             date.className = 'conversation-date';
-            date.textContent = this.formatDate(conversation.updatedAt);
+            date.textContent = `${this.formatDate(conversation.updatedAt)} (${messageCount}条消息)`;
             
             // 添加一个删除按钮
             const deleteBtn = document.createElement('button');
@@ -392,6 +408,13 @@ class ChatManager {
             item.appendChild(title);
             item.appendChild(date);
             item.appendChild(deleteBtn);
+            
+            // 添加点击事件，确保对话切换功能正常工作
+            item.addEventListener('click', () => {
+                console.log(`Clicked on conversation ${conversation.id} with ${messageCount} messages`);
+                this.switchConversation(conversation.id);
+            });
+            
             container.appendChild(item);
         });
         
