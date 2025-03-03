@@ -141,6 +141,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // 新建对话
     function createNewChat() {
         if (window.chatManager) {
+            // 获取当前对话
+            const currentConversation = window.chatManager.getConversationById(window.chatManager.currentConversationId);
+            
+            // 如果当前对话存在且已经是空的（0条消息），则不创建新对话
+            if (currentConversation && (!currentConversation.messages || currentConversation.messages.length === 0)) {
+                console.log('当前已是空对话，无需创建新对话');
+                // 只关闭历史面板
+                historyPanel.classList.remove('active');
+                return;
+            }
+            
+            // 否则创建新对话
             window.chatManager.createNewConversation();
             
             // 关闭历史面板
