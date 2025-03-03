@@ -10,10 +10,8 @@ class ChatManager {
         this.loadConversations();
         this.setupEventListeners();
         
-        // Create a new conversation when the page loads
-        if (!this.currentConversationId) {
-            this.createNewConversation();
-        }
+        // Always create a new conversation when the page loads (per requirement)
+        this.createNewConversation();
     }
 
     loadConversations() {
@@ -33,6 +31,9 @@ class ChatManager {
                     this.loadCurrentConversation();
                 }
             }
+            
+            // Add debug log to verify data loading
+            console.log('Loaded conversations:', this.conversations);
         } catch (e) {
             console.error('Error loading conversations:', e);
             // Create a new conversation if there's an error
@@ -207,10 +208,20 @@ class ChatManager {
 
     saveConversations() {
         try {
-            localStorage.setItem('conversations', JSON.stringify(this.conversations));
+            // Clone the conversations to ensure we have a clean object
+            const conversationsToSave = JSON.parse(JSON.stringify(this.conversations));
+            localStorage.setItem('conversations', JSON.stringify(conversationsToSave));
             localStorage.setItem('currentConversationId', this.currentConversationId);
+            
+            // Log success message with data size
+            const dataSize = JSON.stringify(conversationsToSave).length;
+            console.log(`Saved ${this.conversations.length} conversations (${dataSize} bytes)`);
         } catch (err) {
             console.error('Error saving conversations:', err);
+            // Show alert for users when saving fails
+            if (err.name === 'QuotaExceededError') {
+                console.warn('LocalStorage quota exceeded. Try clearing some history.');
+            }
         }
     }
 
