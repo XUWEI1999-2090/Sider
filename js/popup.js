@@ -3,10 +3,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初始化选中文本数组
     window.selectedTexts = [];
     
-    // 确保每次打开页面都新建一个对话
-    if (window.chatManager) {
-        window.chatManager.createNewConversation();
-    }
+    // 我们不需要在这里创建新对话，因为ChatManager的构造函数中已经处理了
+    // 当没有现有对话时才会创建新对话
     
     // 检查是否在Chrome扩展环境中
     if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {

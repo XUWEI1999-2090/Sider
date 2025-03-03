@@ -10,30 +10,53 @@ class ChatManager {
         this.loadConversations();
         this.setupEventListeners();
         
-        // Always create a new conversation when the page loads (per requirement)
-        this.createNewConversation();
+        // We'll create a new conversation in loadConversations if there are no existing ones
+        // This allows us to preserve history while still creating a new chat when needed
     }
 
     loadConversations() {
         try {
-            const savedConversations = localStorage.getItem('conversations');
-            if (savedConversations) {
-                this.conversations = JSON.parse(savedConversations);
-                
-                // Get the current conversation ID from localStorage
-                const currentId = localStorage.getItem('currentConversationId');
-                if (currentId && this.getConversationById(currentId)) {
-                    this.currentConversationId = currentId;
-                    this.loadCurrentConversation();
-                } else if (this.conversations.length > 0) {
-                    // Use the most recent conversation if current ID is not valid
-                    this.currentConversationId = this.conversations[0].id;
-                    this.loadCurrentConversation();
+            // Use chrome.storage.local instead of localStorage for larger storage capacity
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                chrome.storage.local.get(['conversations', 'currentConversationId'], (result) => {
+                    console.log('Loading from chrome.storage:', result);
+                    
+                    if (result.conversations && result.conversations.length > 0) {
+                        this.conversations = result.conversations;
+                        
+                        // Get the current conversation ID
+                        const currentId = result.currentConversationId;
+                        if (currentId && this.getConversationById(currentId)) {
+                            this.currentConversationId = currentId;
+                            this.loadCurrentConversation();
+                        } else {
+                            // Use the most recent conversation if current ID is not valid
+                            this.currentConversationId = this.conversations[0].id;
+                            this.loadCurrentConversation();
+                        }
+                    }
+                    
+                    // Add debug log to verify data loading
+                    console.log('Loaded conversations:', this.conversations);
+                });
+            } else {
+                // Fallback to localStorage for development/testing
+                const savedConversations = localStorage.getItem('conversations');
+                if (savedConversations) {
+                    this.conversations = JSON.parse(savedConversations);
+                    
+                    // Get the current conversation ID from localStorage
+                    const currentId = localStorage.getItem('currentConversationId');
+                    if (currentId && this.getConversationById(currentId)) {
+                        this.currentConversationId = currentId;
+                        this.loadCurrentConversation();
+                    } else if (this.conversations.length > 0) {
+                        // Use the most recent conversation if current ID is not valid
+                        this.currentConversationId = this.conversations[0].id;
+                        this.loadCurrentConversation();
+                    }
                 }
             }
-            
-            // Add debug log to verify data loading
-            console.log('Loaded conversations:', this.conversations);
         } catch (e) {
             console.error('Error loading conversations:', e);
             // Create a new conversation if there's an error
@@ -210,17 +233,31 @@ class ChatManager {
         try {
             // Clone the conversations to ensure we have a clean object
             const conversationsToSave = JSON.parse(JSON.stringify(this.conversations));
-            localStorage.setItem('conversations', JSON.stringify(conversationsToSave));
-            localStorage.setItem('currentConversationId', this.currentConversationId);
             
-            // Log success message with data size
-            const dataSize = JSON.stringify(conversationsToSave).length;
-            console.log(`Saved ${this.conversations.length} conversations (${dataSize} bytes)`);
+            // Use chrome.storage.local if available (has much higher storage limit than localStorage)
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                chrome.storage.local.set({
+                    'conversations': conversationsToSave,
+                    'currentConversationId': this.currentConversationId
+                }, () => {
+                    // Log success message with data size
+                    const dataSize = JSON.stringify(conversationsToSave).length;
+                    console.log(`Saved ${this.conversations.length} conversations to chrome.storage (${dataSize} bytes)`);
+                });
+            } else {
+                // Fallback to localStorage for development/testing
+                localStorage.setItem('conversations', JSON.stringify(conversationsToSave));
+                localStorage.setItem('currentConversationId', this.currentConversationId);
+                
+                // Log success message with data size
+                const dataSize = JSON.stringify(conversationsToSave).length;
+                console.log(`Saved ${this.conversations.length} conversations to localStorage (${dataSize} bytes)`);
+            }
         } catch (err) {
             console.error('Error saving conversations:', err);
             // Show alert for users when saving fails
             if (err.name === 'QuotaExceededError') {
-                console.warn('LocalStorage quota exceeded. Try clearing some history.');
+                console.warn('Storage quota exceeded. Try clearing some history.');
             }
         }
     }
@@ -310,8 +347,18 @@ class ChatManager {
     clearHistory() {
         this.conversations = [];
         this.currentConversationId = null;
-        localStorage.removeItem('conversations');
-        localStorage.removeItem('currentConversationId');
+        
+        // Clear from chrome.storage.local if available
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+            chrome.storage.local.remove(['conversations', 'currentConversationId'], () => {
+                console.log('Cleared history from chrome.storage');
+            });
+        } else {
+            // Fallback to localStorage
+            localStorage.removeItem('conversations');
+            localStorage.removeItem('currentConversationId');
+        }
+        
         if (this.messageContainer) {
             this.messageContainer.innerHTML = '';
         }
