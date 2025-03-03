@@ -120,13 +120,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // 绑定对话列表点击事件
     if (conversationsList) {
         conversationsList.addEventListener('click', (e) => {
+            // 如果点击的是删除按钮，不要处理
+            if (e.target.closest('.delete-conversation-btn')) {
+                return;
+            }
+            
             const conversationItem = e.target.closest('.conversation-item');
             if (conversationItem) {
                 const conversationId = conversationItem.dataset.id;
+                console.log('Clicked on conversation:', conversationId);
+                
                 if (window.chatManager && conversationId) {
+                    // 先移除所有活动状态
+                    document.querySelectorAll('.conversation-item').forEach(item => {
+                        item.classList.remove('active-conversation');
+                    });
+                    
+                    // 添加当前项的活动状态
+                    conversationItem.classList.add('active-conversation');
+                    
+                    // 切换对话
                     const switched = window.chatManager.switchConversation(conversationId);
                     if (switched) {
-                        // Close the history panel
+                        // 关闭历史面板
                         historyPanel.classList.remove('active');
                     }
                 }

@@ -107,19 +107,50 @@ class ChatManager {
     loadCurrentConversation() {
         const conversation = this.getConversationById(this.currentConversationId);
         if (conversation) {
-            localStorage.setItem('currentConversationId', this.currentConversationId);
+            // 更新存储中的当前会话ID
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                chrome.storage.local.set({'currentConversationId': this.currentConversationId});
+            } else {
+                localStorage.setItem('currentConversationId', this.currentConversationId);
+            }
+            
+            // 清空并重新渲染消息
             if (this.messageContainer) {
                 this.messageContainer.innerHTML = '';
-                conversation.messages.forEach(message => this.renderMessage(message));
+                if (conversation.messages && conversation.messages.length > 0) {
+                    conversation.messages.forEach(message => this.renderMessage(message));
+                }
                 this.scrollToBottom();
             }
+            
+            console.log('Loaded conversation:', conversation);
+        } else {
+            console.warn('Failed to load conversation with ID:', this.currentConversationId);
         }
     }
 
     switchConversation(id) {
+        console.log('Switching to conversation:', id);
+        const conversation = this.getConversationById(id);
+        
+        if (!conversation) {
+            console.error('Conversation not found:', id);
+            return false;
+        }
+        
         if (this.currentConversationId !== id) {
             this.currentConversationId = id;
             this.loadCurrentConversation();
+            
+            // 更新历史记录列表中的活动状态
+            const conversationItems = document.querySelectorAll('.conversation-item');
+            conversationItems.forEach(item => {
+                item.classList.remove('active-conversation');
+                if (item.dataset.id === id) {
+                    item.classList.add('active-conversation');
+                }
+            });
+            
             return true;
         }
         return false;
@@ -304,27 +335,87 @@ class ChatManager {
     }
 
     renderConversations(container) {
-        if (!container || !this.conversations.length) return;
+        if (!container) return;
         
         container.innerHTML = '';
         
+        // 检查是否有对话
+        if (!this.conversations || this.conversations.length === 0) {
+            console.log('No conversations to render');
+            const noConversationsMsg = document.getElementById('noConversationsMsg');
+            if (noConversationsMsg) {
+                noConversationsMsg.style.display = 'block';
+            }
+            return;
+        }
+        
+        console.log('Rendering conversations:', this.conversations.length);
+        
+        // 隐藏"暂无历史对话"消息
+        const noConversationsMsg = document.getElementById('noConversationsMsg');
+        if (noConversationsMsg) {
+            noConversationsMsg.style.display = 'none';
+        }
+        
+        // 渲染所有对话
         this.conversations.forEach(conversation => {
+            if (!conversation || !conversation.id) {
+                console.warn('Invalid conversation object:', conversation);
+                return;
+            }
+            
             const item = document.createElement('div');
             item.className = `conversation-item ${conversation.id === this.currentConversationId ? 'active-conversation' : ''}`;
             item.dataset.id = conversation.id;
             
             const title = document.createElement('div');
             title.className = 'conversation-title';
-            title.textContent = conversation.title;
+            title.textContent = conversation.title || '无标题对话';
             
             const date = document.createElement('div');
             date.className = 'conversation-date';
             date.textContent = this.formatDate(conversation.updatedAt);
             
+            // 添加一个删除按钮
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-sm btn-outline-danger delete-conversation-btn';
+            deleteBtn.innerHTML = '<i data-feather="trash-2"></i>';
+            deleteBtn.style.float = 'right';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation(); // 阻止事件冒泡，避免触发对话切换
+                if (confirm('确定要删除此对话吗？')) {
+                    this.deleteConversation(conversation.id);
+                    this.renderConversations(container);
+                }
+            };
+            
             item.appendChild(title);
             item.appendChild(date);
+            item.appendChild(deleteBtn);
             container.appendChild(item);
         });
+        
+        // 初始化Feather图标
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    }
+    
+    deleteConversation(id) {
+        // 删除对话
+        this.conversations = this.conversations.filter(c => c.id !== id);
+        
+        // 如果删除的是当前对话，切换到第一个对话或创建新对话
+        if (this.currentConversationId === id) {
+            if (this.conversations.length > 0) {
+                this.currentConversationId = this.conversations[0].id;
+                this.loadCurrentConversation();
+            } else {
+                this.createNewConversation();
+            }
+        }
+        
+        this.saveConversations();
     }
     
     formatDate(dateString) {
@@ -369,5 +460,22 @@ class ChatManager {
 
 // Initialize chat manager
 document.addEventListener('DOMContentLoaded', () => {
-    window.chatManager = new ChatManager();
+    // 确保不会创建多个实例
+    if (!window.chatManager) {
+        console.log('Initializing ChatManager');
+        window.chatManager = new ChatManager();
+        
+        // 确保至少有一个对话
+        setTimeout(() => {
+            if (!window.chatManager.currentConversationId) {
+                console.log('No current conversation, creating new one');
+                window.chatManager.createNewConversation();
+            }
+            
+            // 每分钟自动保存一次，防止数据丢失
+            setInterval(() => {
+                window.chatManager.saveConversations();
+            }, 60000);
+        }, 1000);
+    }
 });
