@@ -38,9 +38,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
 });
 
+// Chrome 扩展 API 中没有 sidePanel.close() 方法
+// 我们只能打开侧边栏，无法通过扩展 API 关闭它
+// 用户需要手动点击侧边栏上的关闭按钮
+
 chrome.action.onClicked.addListener((tab) => {
-    chrome.tabs.captureVisibleTab(tab.windowId, {}, (image) => {
-        // 处理截图，例如保存或发送到其他地方
-        console.log(image);
-    });
+    // 打开侧边栏
+    chrome.sidePanel.open({ windowId: tab.windowId });
 });
