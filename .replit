@@ -1,5 +1,5 @@
 modules = ["nodejs-20", "web", "python-3.11", "nix"]
-run = "node index.js"
+run = "npx http-server . -p 3000 --cors -c-1"
 
 [nix]
 channel = "stable-24_05"
