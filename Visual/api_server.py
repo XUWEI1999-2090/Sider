@@ -60,4 +60,4 @@ def upload_pdf():
         return jsonify({"error": f"处理请求时出错: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)
