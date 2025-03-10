@@ -12,6 +12,18 @@ import multimodal_handler
 app = Flask(__name__)
 CORS(app)  # 启用CORS以支持从浏览器扩展发起的请求
 
+@app.route('/', methods=['GET'])
+def index():
+    """提供API服务的根路径响应"""
+    return jsonify({
+        "status": "ok",
+        "message": "API服务器正在运行",
+        "endpoints": [
+            "/api/upload-pdf - 上传PDF文件并处理",
+            "/api/query - 处理各种类型的查询请求"
+        ]
+    })
+
 @app.route('/api/upload-pdf', methods=['POST'])
 def upload_pdf():
     """处理上传的PDF文件并返回问答结果（保持向后兼容性）"""
