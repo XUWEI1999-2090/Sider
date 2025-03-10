@@ -53,17 +53,6 @@ args = "npx http-server . -p 8080 --cors -c-1"
 waitForPort = 8080
 
 [[workflows.workflow]]
-name = "API服务器"
-author = 40280296
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd Visual && python api_server.py"
-
-[[workflows.workflow]]
 name = "API Server"
 author = 40280296
 
