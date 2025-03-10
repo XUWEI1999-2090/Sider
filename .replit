@@ -9,7 +9,7 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "node index.js"]
 
 [workflows]
-runButton = "API Server"
+runButton = "Project Server"
 
 [[workflows.workflow]]
 name = "Project"
@@ -49,7 +49,7 @@ author = 40280296
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd Visual && python api_server.py"
+args = "cd Visual && pip install flask flask-cors PyMuPDF Pillow requests && python api_server.py"
 
 [[ports]]
 localPort = 3000
