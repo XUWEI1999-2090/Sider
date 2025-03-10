@@ -189,15 +189,39 @@
   .file-preview {
       display: flex;
       align-items: center;
-      padding: 5px 10px;
-      background-color: var(--bg-color);
+      padding: 8px 12px;
+      background-color: var(--message-bg-light);
       border-radius: 4px;
       margin-bottom: 5px;
+      position: relative;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: all 0.2s ease;
+  }
+
+  body.dark-mode .file-preview {
+      background-color: var(--message-bg-dark);
   }
 
   .file-preview i {
       margin-right: 8px;
       color: var(--primary-color);
+  }
+  
+  .file-preview .btn-close {
+      opacity: 0.7;
+      transition: opacity 0.2s ease;
+  }
+  
+  .file-preview .btn-close:hover {
+      opacity: 1;
+  }
+  
+  .file-preview:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+  }
+  
+  body.dark-mode .file-preview:hover {
+      background-color: rgba(255, 255, 255, 0.05);
   }
 
   .message-attachment {

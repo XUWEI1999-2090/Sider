@@ -88,15 +88,39 @@ class PDFHandler {
                 // 创建文件预览元素
                 const filePreview = document.createElement('div');
                 filePreview.className = 'file-preview';
+                filePreview.style.position = 'relative';
+                filePreview.style.display = 'flex';
+                filePreview.style.alignItems = 'center';
                 
                 const fileIcon = document.createElement('i');
                 fileIcon.setAttribute('data-feather', 'file-text');
                 
                 const fileName = document.createElement('span');
                 fileName.textContent = file.name;
+                fileName.style.marginLeft = '8px';
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'btn btn-close';
+                removeBtn.innerHTML = '<i data-feather="x"></i>';
+                removeBtn.style.position = 'absolute';
+                removeBtn.style.right = '5px';
+                removeBtn.style.top = '50%';
+                removeBtn.style.transform = 'translateY(-50%)';
+                removeBtn.style.backgroundColor = 'transparent';
+                removeBtn.style.border = 'none';
+                removeBtn.style.padding = '2px';
+                
+                // 添加删除按钮功能
+                removeBtn.addEventListener('click', () => {
+                    attachmentPreview.classList.add('d-none');
+                    previewContainer.innerHTML = '';
+                    // 重置文件输入，允许再次上传相同文件
+                    this.fileInput.value = '';
+                });
                 
                 filePreview.appendChild(fileIcon);
                 filePreview.appendChild(fileName);
+                filePreview.appendChild(removeBtn);
                 previewContainer.appendChild(filePreview);
                 
                 // 刷新图标
