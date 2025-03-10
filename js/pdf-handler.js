@@ -1,6 +1,5 @@
-
 /**
- * PDF处理器模块 - 处理PDF文件上传和处理
+ * PDF处理器模块 - 处理PDF文件上传和与API交互
  */
 
 class PDFHandler {
@@ -38,12 +37,12 @@ class PDFHandler {
         uploadBtn.className = 'btn btn-action';
         uploadBtn.id = 'uploadPdfBtn';
         uploadBtn.title = '上传PDF';
-        
+
         // 添加PDF图标
         const icon = document.createElement('i');
         icon.setAttribute('data-feather', 'file-text');
         uploadBtn.appendChild(icon);
-        
+
         // 查找输入组
         const inputGroup = document.querySelector('.input-group-append');
         if (inputGroup) {
@@ -53,7 +52,7 @@ class PDFHandler {
             if (typeof feather !== 'undefined') {
                 feather.replace();
             }
-            
+
             // 添加点击事件监听器
             uploadBtn.addEventListener('click', this.triggerFileSelection.bind(this));
         }
@@ -72,129 +71,137 @@ class PDFHandler {
     handleFileSelected(event) {
         const file = event.target.files[0];
         if (!file) return;
-        
-        console.log('已选择文件:', file.name);
-        
-        // 显示附件预览区域
-        const attachmentPreview = document.getElementById('attachmentPreview');
-        if (attachmentPreview) {
-            attachmentPreview.classList.remove('d-none');
-            
-            // 获取预览容器，不清空现有内容
-            const previewContainer = document.getElementById('previewContainer');
-            if (previewContainer) {
-                // 不再清空整个预览区域
-                
-                // 创建文件预览元素
-                const filePreview = document.createElement('div');
-                filePreview.className = 'file-preview';
-                filePreview.style.position = 'relative';
-                filePreview.style.display = 'flex';
-                filePreview.style.alignItems = 'center';
-                
-                const fileIcon = document.createElement('i');
-                fileIcon.setAttribute('data-feather', 'file-text');
-                
-                const fileName = document.createElement('span');
-                fileName.textContent = file.name;
-                fileName.style.marginLeft = '8px';
-                
-                const removeBtn = document.createElement('button');
-                removeBtn.className = 'btn btn-close';
-                removeBtn.innerHTML = '<i data-feather="x"></i>';
-                removeBtn.style.position = 'absolute';
-                removeBtn.style.right = '5px';
-                removeBtn.style.top = '5px';
-                removeBtn.style.backgroundColor = 'transparent';
-                removeBtn.style.border = 'none';
-                removeBtn.style.padding = '0';
-                removeBtn.style.width = '20px';
-                removeBtn.style.height = '20px';
-                removeBtn.style.display = 'flex';
-                removeBtn.style.alignItems = 'center';
-                removeBtn.style.justifyContent = 'center';
-                
-                // 添加删除按钮功能
-                removeBtn.addEventListener('click', () => {
-                    // 只移除当前文件预览
-                    filePreview.remove();
-                    
-                    // 检查是否还有其他附件
-                    if (previewContainer.children.length === 0) {
-                        attachmentPreview.classList.add('d-none');
-                    }
-                    
-                    // 重置文件输入，允许再次上传相同文件
-                    this.fileInput.value = '';
-                });
-                
-                filePreview.appendChild(fileIcon);
-                filePreview.appendChild(fileName);
-                filePreview.appendChild(removeBtn);
-                previewContainer.appendChild(filePreview);
-                
-                // 刷新图标
-                if (typeof feather !== 'undefined') {
-                    feather.replace();
-                }
-            }
-        }
-        
+
         // 处理PDF文件
-        this.processPDF(file);
-    }
-
-    /**
-     * 处理PDF文件
-     */
-    processPDF(file) {
-        // 创建一个FormData对象来发送文件
-        const formData = new FormData();
-        formData.append('pdf_file', file);
-        
-        try {
-            // 创建文件读取器获取文件内容
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const fileData = e.target.result;
-                
-                // 在本地环境中显示PDF内容
-                this.displayPDFContent(file.name, fileData);
-            };
-            reader.readAsArrayBuffer(file);
-        } catch (error) {
-            console.error('处理PDF时出错:', error);
-        }
-    }
-
-    /**
-     * 显示PDF内容
-     */
-    displayPDFContent(fileName, fileData) {
-        // 获取聊天管理器实例
-        const chatManager = window.chatManager;
-        if (!chatManager) {
-            console.error('无法获取聊天管理器实例');
-            return;
-        }
-        
-        // 向聊天添加PDF附件消息
-        chatManager.addMessage({
-            role: 'user',
-            content: `我上传了PDF文件: ${fileName}。请帮我分析这个文档。`,
-            timestamp: new Date().toISOString(),
-            hasAttachment: true,
-            attachmentType: 'pdf',
-            attachmentName: fileName
-        });
-        
-        // 清空输入框
-        const messageInput = document.getElementById('messageInput');
-        if (messageInput) {
-            messageInput.value = '';
-        }
+        handlePdfUpload(file);
     }
 }
+
+
+/**
+ * 处理PDF文件上传
+ * @param {File} file - 用户选择的PDF文件
+ */
+function handlePdfUpload(file) {
+    // 显示附件预览区域
+    const attachmentPreview = document.getElementById('attachmentPreview');
+    const previewContainer = document.getElementById('previewContainer');
+
+    // 清空之前的文件预览
+    if (!attachmentPreview.classList.contains('d-none')) {
+        attachmentPreview.classList.remove('d-none');
+    }
+
+    // 创建文件预览元素
+    const filePreviewDiv = document.createElement('div');
+    filePreviewDiv.className = 'file-preview';
+    filePreviewDiv.id = `file-preview-${Date.now()}`;
+
+    // 创建文件图标
+    const fileIconEl = document.createElement('i');
+    fileIconEl.setAttribute('data-feather', 'file');
+
+    // 创建文件名元素
+    const fileNameEl = document.createElement('span');
+    fileNameEl.textContent = file.name;
+    fileNameEl.className = 'ms-2';
+
+    // 创建关闭按钮
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'btn-close ms-auto';
+    closeBtn.type = 'button';
+    closeBtn.setAttribute('aria-label', 'Close');
+
+    // 添加关闭按钮事件
+    closeBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        filePreviewDiv.remove();
+
+        // 如果没有预览项目，隐藏预览区域
+        if (previewContainer.children.length === 0) {
+            attachmentPreview.classList.add('d-none');
+        }
+
+        // 重置文件输入
+        document.getElementById('pdfFileInput').value = '';
+    });
+
+    // 组装预览元素
+    filePreviewDiv.appendChild(fileIconEl);
+    filePreviewDiv.appendChild(fileNameEl);
+    filePreviewDiv.appendChild(closeBtn);
+
+    // 添加到预览容器
+    previewContainer.appendChild(filePreviewDiv);
+
+    // 初始化Feather图标
+    feather.replace();
+
+    // 存储文件引用，用于后续发送
+    filePreviewDiv.dataset.file = JSON.stringify({
+        name: file.name,
+        size: file.size,
+        type: file.type
+    });
+
+    // 也将文件对象存储在全局变量中（实际应用中可能需要更好的方式）
+    window.currentPdfFile = file;
+}
+
+/**
+ * 发送PDF文件到服务器并获取回答
+ * @param {string} message - 用户输入的消息
+ * @returns {Promise<string>} - 处理结果
+ */
+async function processPdfAndGetAnswer(message) {
+    if (!window.currentPdfFile) {
+        return "请先上传PDF文件。";
+    }
+
+    try {
+        // 创建FormData对象
+        const formData = new FormData();
+        formData.append('file', window.currentPdfFile);
+        formData.append('prompt', message || "这个PDF文档里包含什么信息？");
+
+        // 显示加载状态
+        const loadingMessage = "正在处理PDF文件，请稍候...";
+
+        // 发送请求到API服务器
+        const response = await fetch('http://localhost:5000/api/upload-pdf', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || '处理PDF时出错');
+        }
+
+        const data = await response.json();
+
+        // 清除当前PDF文件引用
+        window.currentPdfFile = null;
+
+        // 清除预览
+        const attachmentPreview = document.getElementById('attachmentPreview');
+        const previewContainer = document.getElementById('previewContainer');
+        previewContainer.innerHTML = '';
+        attachmentPreview.classList.add('d-none');
+
+        // 重置文件输入
+        document.getElementById('pdfFileInput').value = '';
+
+        return data.answer || "无法从AI获取回答。";
+
+    } catch (error) {
+        console.error('PDF处理错误:', error);
+        return `处理PDF时出错: ${error.message}`;
+    }
+}
+
+// 导出处理PDF文件的函数供其他模块使用
+window.processPdfAndGetAnswer = processPdfAndGetAnswer;
 
 // 在页面加载完成后初始化PDF处理器
 document.addEventListener('DOMContentLoaded', () => {

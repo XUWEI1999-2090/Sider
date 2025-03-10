@@ -240,26 +240,32 @@ class ChatManager {
         this.attachments = []; // Clear attachments after sending
 
         try {
-            const options = {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer sk-rebktjhdywuqfmulddzhdygglyrkeengnhlshvejdveeuwdw',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model: "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
-                    messages: [{
-                        role: "user",
-                        content: content
-                    }]
-                })
-            };
+            let response;
+            if (window.currentPdfFile) {
+                response = await processPdfAndGetAnswer(content); // Use content instead of message
+            } else {
+                const options = {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer sk-rebktjhdywuqfmulddzhdygglyrkeengnhlshvejdveeuwdw',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+                        messages: [{
+                            role: "user",
+                            content: content
+                        }]
+                    })
+                };
 
-            const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', options);
-            const data = await response.json();
+                const res = await fetch('https://api.siliconflow.cn/v1/chat/completions', options);
+                const data = await res.json();
+                response = data.choices[0].message.content;
+            }
 
             const aiMessage = {
-                text: data.choices[0].message.content,
+                text: response,
                 sender: 'assistant',
                 timestamp: new Date().toISOString()
             };
