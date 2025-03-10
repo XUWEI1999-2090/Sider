@@ -23,38 +23,21 @@ class PDFHandler {
         // 添加文件选择事件处理
         this.fileInput.addEventListener('change', this.handleFileSelected.bind(this));
 
-        // 创建上传按钮并添加到界面
-        this.createUploadButton();
+        // 查找并使用已有的上传按钮
+        this.findExistingUploadButton();
     }
 
     /**
-     * 创建上传按钮
+     * 查找已有的上传按钮
      */
-    createUploadButton() {
-        // 创建上传按钮
-        const uploadBtn = document.createElement('button');
-        uploadBtn.type = 'button';
-        uploadBtn.className = 'btn btn-action';
-        uploadBtn.id = 'uploadPdfBtn';
-        uploadBtn.title = '上传PDF';
-
-        // 添加PDF图标
-        const icon = document.createElement('i');
-        icon.setAttribute('data-feather', 'file-text');
-        uploadBtn.appendChild(icon);
-
-        // 查找输入组
-        const inputGroup = document.querySelector('.input-group-append');
-        if (inputGroup) {
-            // 插入到截图按钮之前
-            inputGroup.insertBefore(uploadBtn, document.getElementById('screenshotBtn'));
-            // 初始化Feather图标
-            if (typeof feather !== 'undefined') {
-                feather.replace();
-            }
-
+    findExistingUploadButton() {
+        // 查找已有的上传PDF按钮
+        const existingBtn = document.querySelector('.input-group-append button[title="上传PDF文件"]');
+        if (existingBtn) {
             // 添加点击事件监听器
-            uploadBtn.addEventListener('click', this.triggerFileSelection.bind(this));
+            existingBtn.addEventListener('click', this.triggerFileSelection.bind(this));
+        } else {
+            console.error('未找到上传PDF按钮');
         }
     }
 
