@@ -103,12 +103,17 @@ class PDFHandler {
                 removeBtn.className = 'btn btn-close';
                 removeBtn.innerHTML = '<i data-feather="x"></i>';
                 removeBtn.style.position = 'absolute';
-                removeBtn.style.right = '5px';
+                removeBtn.style.right = '10px';
                 removeBtn.style.top = '50%';
                 removeBtn.style.transform = 'translateY(-50%)';
                 removeBtn.style.backgroundColor = 'transparent';
                 removeBtn.style.border = 'none';
-                removeBtn.style.padding = '2px';
+                removeBtn.style.padding = '0';
+                removeBtn.style.width = '20px';
+                removeBtn.style.height = '20px';
+                removeBtn.style.display = 'flex';
+                removeBtn.style.alignItems = 'center';
+                removeBtn.style.justifyContent = 'center';
                 
                 // 添加删除按钮功能
                 removeBtn.addEventListener('click', () => {
