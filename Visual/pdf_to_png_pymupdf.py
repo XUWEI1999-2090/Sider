@@ -2,81 +2,69 @@
 import os
 import fitz  # PyMuPDF
 from PIL import Image
-from Qwen import query_qwen  # 添加这行导入
+import io
+import sys
 
-def convert_pdf_to_pngs(pdf_path, output_dir, image_dim=1024):
+def convert_pdf_to_pngs(pdf_path, output_dir=None):
     """
-    将PDF文件转换为PNG图像，每页生成一个PNG文件，使用PyMuPDF库
-    
+    将PDF文件转换为PNG图像
+
     参数:
-    - pdf_path: PDF文件路径
-    - output_dir: 输出目录
-    - image_dim: 图像最长边的目标尺寸
-    
+    pdf_path (str): PDF文件路径
+    output_dir (str, optional): 输出目录，如果不指定，返回内存中的图像数据
+
     返回:
-    - dict: 包含所有生成图片路径的消息模板
+    list: 如果指定了output_dir，返回保存的图像文件路径列表；否则返回图像数据列表
     """
-    # 确保输出目录存在
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # 获取PDF文件名(不含扩展名)
-    base_name = os.path.splitext(os.path.basename(pdf_path))[0]
-    
-    saved_images = []  # 用于存储成功保存的图片路径
-    
-    try:
-        # 打开PDF文件
-        pdf_document = fitz.open(pdf_path)
-        num_pages = pdf_document.page_count
-        
-        print(f"PDF '{pdf_path}' 共有 {num_pages} 页")
-        
-        # 处理每一页
-        for page_num in range(num_pages):
-            try:
-                # 获取页面
-                page = pdf_document[page_num]
-                
-                # 计算缩放比例，使最长边为image_dim
-                orig_width, orig_height = page.rect.width, page.rect.height
-                scale_factor = image_dim / max(orig_width, orig_height)
-                
-                # 设置渲染参数
-                mat = fitz.Matrix(scale_factor, scale_factor)
-                
-                # 渲染页面为像素图
-                pix = page.get_pixmap(matrix=mat, alpha=False)
-                
-                # 转换为PIL图像进行保存
-                img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                
-                # 构建输出文件路径
-                output_path = os.path.join(output_dir, f"{base_name}_page{page_num+1}.png")
-                
-                # 保存为PNG
-                img.save(output_path, format="PNG")
-                saved_images.append(output_path)  # 添加保存成功的图片路径
-                
+    # 确定输出目录
+    save_to_file = output_dir is not None
+    if save_to_file and not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # 打开PDF文件
+    pdf_document = fitz.open(pdf_path)
+    results = []
+
+    # 获取PDF文件名（不含扩展名）
+    pdf_filename = os.path.splitext(os.path.basename(pdf_path))[0]
+
+    # 遍历每一页
+    for page_num in range(len(pdf_document)):
+        try:
+            # 获取页面
+            page = pdf_document.load_page(page_num)
+
+            # 渲染为图像，放大系数为2以提高清晰度
+            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+
+            if save_to_file:
+                # 构造输出文件路径
+                output_path = os.path.join(output_dir, f"{pdf_filename}_page{page_num+1}.png")
+
+                # 保存图像
+                pix.save(output_path)
+                results.append(output_path)
                 print(f"✅ 已保存第 {page_num+1} 页: {output_path}")
-                
-            except Exception as e:
-                print(f"❌ 处理第 {page_num+1} 页时出错: {e}")
-        
-        # 关闭PDF文档
-        pdf_document.close()
-        
-    except Exception as e:
-        print(f"❌ 打开PDF文件时出错: {e}")
-    
-    print("PDF转换完成") 
-    return saved_images
+            else:
+                # 将图像数据返回
+                img_data = pix.tobytes("png")
+                img = Image.open(io.BytesIO(img_data))
+                results.append(img)
+                print(f"✅ 已处理第 {page_num+1} 页")
+
+        except Exception as e:
+            print(f"❌ 处理第 {page_num+1} 页时出错: {e}")
+
+    # 关闭PDF文档
+    pdf_document.close()
+
+    return results
 
 if __name__ == "__main__":
-    # 直接在这里设置参数
-    pdf_path = r"gnarly_pdfs\ambiguous.pdf"  # PDF文件路径
-    output_dir = "png_images"   # 输出目录
-    image_dim = 1024           # 图像最长边的目标尺寸
-    
-    content = convert_pdf_to_pngs(pdf_path, output_dir, image_dim)
-
-
+    # 测试函数
+    if len(sys.argv) > 1:
+        pdf_path = sys.argv[1]
+        output_dir = "png_images" if len(sys.argv) <= 2 else sys.argv[2]
+        convert_pdf_to_pngs(pdf_path, output_dir)
+    else:
+        print("用法: python pdf_to_png_pymupdf.py [PDF文件路径] [输出目录(可选)]")
