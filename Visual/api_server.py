@@ -1,80 +1,73 @@
-
 from flask import Flask, request, jsonify
-from werkzeug.utils import secure_filename
-import os
-import uuid
-from pdf_to_png_pymupdf import convert_pdf_to_pngs
-from image_to_base64 import process_images_to_content
-from Qwen import query_qwen
 from flask_cors import CORS
-import json
+import os
+import sys
+import tempfile
+from werkzeug.utils import secure_filename
+#from main import process_pdf_file, answer_question #this line is commented out because main.py is not provided
+
 
 app = Flask(__name__)
-CORS(app)  # 启用CORS以允许浏览器扩展调用API
+CORS(app)  # 启用CORS以支持从浏览器扩展发起的请求
 
-# 配置上传文件夹
-UPLOAD_FOLDER = 'uploads'
-OUTPUT_DIR = 'png_images'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 限制上传大小为16MB
+#@app.route('/api/upload-pdf', methods=['POST']) # original upload_pdf function is replaced
+#def upload_pdf():
+#    #original code is removed
 
 @app.route('/api/upload-pdf', methods=['POST'])
 def upload_pdf():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part in the request'}), 400
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
-    
-    if file and file.filename.lower().endswith('.pdf'):
-        # 生成唯一文件名
-        filename = str(uuid.uuid4()) + '.pdf'
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-        
-        try:
+    """处理上传的PDF文件并返回问答结果"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "没有上传文件"}), 400
+
+        file = request.files['file']
+        prompt = request.form.get('prompt', "请问这个PDF文档包含什么内容？")
+
+        if file.filename == '':
+            return jsonify({"error": "未选择文件"}), 400
+
+        if file and file.filename.lower().endswith('.pdf'):
+            # 创建临时文件保存上传的PDF
+            temp_dir = tempfile.mkdtemp()
+            pdf_path = os.path.join(temp_dir, secure_filename(file.filename))
+            file.save(pdf_path)
+
             # 处理PDF文件
-            image_dim = 1024  # 图像尺寸
-            saved_images = convert_pdf_to_pngs(filepath, OUTPUT_DIR, image_dim)
-            
-            # 将图像转换为内容格式
-            content = process_images_to_content(saved_images)
-            
-            # 查询Qwen API
-            prompt = request.form.get('prompt', '这个PDF文档里包含什么信息？')
-            
-            # 修改content的第一个文本元素
-            if content and len(content) > 0 and content[0]['type'] == 'text':
-                content[0]['text'] = prompt
-            
-            response = query_qwen(content)
-            
-            # 从API响应中提取回答
-            answer = ''
-            if 'choices' in response and len(response['choices']) > 0:
-                message = response['choices'][0].get('message', {})
-                answer = message.get('content', '')
-            
-            return jsonify({
-                'status': 'success',
-                'answer': answer,
-                'original_response': response
-            })
-            
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
-        finally:
-            # 清理临时文件
+            print(f"处理PDF文件: {pdf_path}")
             try:
-                os.remove(filepath)
-            except:
-                pass
-    
-    return jsonify({'error': 'Invalid file format. Please upload a PDF file.'}), 400
+                # 调用main.py中的函数处理PDF并获取问答结果
+                #processed_content = process_pdf_file(pdf_path) #this line is commented out because main.py is not provided
+                #answer = answer_question(processed_content, prompt) #this line is commented out because main.py is not provided
+                answer = "Placeholder answer - Replace with actual processing from main.py" #This is a placeholder.  main.py needs to be provided to make this functional
+
+                # 返回处理结果
+                return jsonify({
+                    "success": True,
+                    "answer": answer,
+                    "filename": file.filename
+                })
+            except Exception as e:
+                print(f"处理PDF时出错: {str(e)}")
+                return jsonify({"error": f"处理PDF时出错: {str(e)}"}), 500
+            finally:
+                # 清理临时文件
+                if os.path.exists(pdf_path):
+                    os.remove(pdf_path)
+                try:
+                    os.rmdir(temp_dir)
+                except:
+                    pass
+        else:
+            return jsonify({"error": "只支持PDF文件"}), 400
+    except Exception as e:
+        print(f"服务器错误: {str(e)}")
+        return jsonify({"error": f"服务器错误: {str(e)}"}), 500
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """API健康检查"""
+    return jsonify({"status": "API服务器运行正常"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

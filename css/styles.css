@@ -234,12 +234,12 @@
   .file-preview .btn-close:hover {
       opacity: 1;
   }
-  
+
   .file-preview .preview-content {
       position: relative;
       display: inline-block;
   }
-  
+
   body.dark-mode .file-preview .btn-close {
       background: var(--bg-dark);
   }
@@ -633,4 +633,20 @@
     cursor: pointer;
     transition: all 0.2s ease;
     position: relative;
+  }
+
+  /* 处理状态指示器 */
+  .processing-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      background-color: rgba(0, 0, 0, 0.05);
+      border-radius: 8px;
+      margin: 10px 0;
+  }
+
+  body.dark-mode .processing-indicator {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: var(--text-dark);
   }

@@ -264,7 +264,13 @@ class ChatManager {
                     timestamp: new Date().toISOString()
                 });
                 
-                response = await processPdfAndGetAnswer(content);
+                // 等待PDF处理并获取答案
+                try {
+                    response = await processPdfAndGetAnswer(content);
+                } catch (error) {
+                    console.error("PDF处理错误:", error);
+                    response = "PDF处理失败: " + error.message;
+                }
             } else {
                 const options = {
                     method: 'POST',
