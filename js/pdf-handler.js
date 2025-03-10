@@ -171,7 +171,7 @@ async function processPdfAndGetAnswer(message) {
         const loadingMessage = "正在处理PDF文件，请稍候...";
 
         // 发送请求到API服务器
-        const response = await fetch('http://localhost:5000/api/upload-pdf', {
+        const response = await fetch('http://0.0.0.0:5000/api/upload-pdf', {
             method: 'POST',
             body: formData
         });

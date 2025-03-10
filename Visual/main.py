@@ -18,6 +18,32 @@ def pdf_to_text(pdf_path):
         for page_num in range(len(doc)):
             # 获取当前页面
             page = doc.load_page(page_num)
+
+onse_data = response.json()
+        if 'choices' in response_data and len(response_data['choices']) > 0:
+            answer = response_data['choices'][0]['message']['content']
+            return answer
+        else:
+            return "无法从AI获取回答。"
+    except Exception as e:
+        print(f"获取回答出错: {e}")
+        return f"获取回答时出错: {str(e)}"
+
+# 测试代码
+if __name__ == "__main__":
+    # 如果提供了命令行参数，则使用第一个参数作为PDF文件路径
+    if len(sys.argv) > 1:
+        pdf_path = sys.argv[1]
+        processed_content = process_pdf_file(pdf_path)
+        print("文本内容:", processed_content["text"][:200], "...")
+        print(f"提取了 {len(processed_content['images'])} 张图片")
+        
+        # 测试问答
+        answer = answer_question(processed_content, "这个PDF文档的主要内容是什么？")
+        print("\n回答:", answer)
+    else:
+        print("用法: python main.py [PDF文件路径]")
+
             # 提取文本
             text_content += page.get_text()
         doc.close()
@@ -64,7 +90,30 @@ def process_pdf_file(pdf_path):
     # 构建处理后的内容
     processed_content = {
         "text": text_content,
-        "images": images,
+        "images": images
+    }
+    return processed_content
+
+def answer_question(processed_content, question):
+    """根据处理后的内容回答问题"""
+    try:
+        # 构建提示词，包含文本内容和图片数量
+        image_count = len(processed_content.get("images", []))
+        prompt = f"根据以下PDF内容回答问题。PDF中包含{image_count}张图片。\n\n文本内容:\n{processed_content['text']}\n\n问题: {question}"
+        
+        # 调用API获取回答
+        headers = {
+            'Authorization': 'Bearer sk-rebktjhdywuqfmulddzhdygglyrkeengnhlshvejdveeuwdw',
+            'Content-Type': 'application/json'
+        }
+        
+        data = {
+            'model': 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',
+            'messages': [{'role': 'user', 'content': prompt}]
+        }
+        
+        response = requests.post('https://api.siliconflow.cn/v1/chat/completions', headers=headers, json=data)
+        respes": images,
         "page_count": len(images),
         "filename": os.path.basename(pdf_path),
         "processed_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
