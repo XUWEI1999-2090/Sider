@@ -215,9 +215,15 @@
   }
 
   .file-preview .btn-close {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      padding: 4px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       opacity: 0.7;
       transition: opacity 0.2s ease;
-      padding: 0;
       width: 20px;
       height: 20px;
       display: flex;
@@ -227,6 +233,15 @@
 
   .file-preview .btn-close:hover {
       opacity: 1;
+  }
+  
+  .file-preview .preview-content {
+      position: relative;
+      display: inline-block;
+  }
+  
+  body.dark-mode .file-preview .btn-close {
+      background: var(--bg-dark);
   }
 
   .file-preview:hover {

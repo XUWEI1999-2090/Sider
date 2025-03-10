@@ -87,12 +87,27 @@ function handlePdfUpload(file) {
     fileNameEl.textContent = file.name;
     fileNameEl.className = 'ms-2';
 
-    // 创建关闭按钮
+    // 创建文件预览内容包装器（使其与截图预览结构一致）
+    const previewContent = document.createElement('div');
+    previewContent.className = 'preview-content';
+    
+    // 创建关闭按钮（使用与截图预览相同的样式）
     const closeBtn = document.createElement('button');
-    closeBtn.className = 'btn-close ms-auto';
+    closeBtn.className = 'btn btn-close';
+    closeBtn.innerHTML = '<i data-feather="x"></i>';
     closeBtn.type = 'button';
     closeBtn.setAttribute('aria-label', 'Close');
 
+    // 创建文件图标和名称的包装器
+    const fileInfoDiv = document.createElement('div');
+    fileInfoDiv.className = 'file-info';
+    fileInfoDiv.style.display = 'flex';
+    fileInfoDiv.style.alignItems = 'center';
+    fileInfoDiv.style.padding = '8px 12px';
+    fileInfoDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
+    fileInfoDiv.style.borderRadius = '4px';
+    fileInfoDiv.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+    
     // 添加关闭按钮事件
     closeBtn.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -108,10 +123,14 @@ function handlePdfUpload(file) {
         window.currentPdfFile = null;
     });
 
+    // 组装文件信息元素
+    fileInfoDiv.appendChild(fileIconEl);
+    fileInfoDiv.appendChild(fileNameEl);
+    
     // 组装预览元素
-    filePreviewDiv.appendChild(fileIconEl);
-    filePreviewDiv.appendChild(fileNameEl);
-    filePreviewDiv.appendChild(closeBtn);
+    previewContent.appendChild(fileInfoDiv);
+    previewContent.appendChild(closeBtn);
+    filePreviewDiv.appendChild(previewContent);
 
     // 添加到预览容器
     previewContainer.appendChild(filePreviewDiv);
