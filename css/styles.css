@@ -179,9 +179,40 @@
 
   /* Attachment Preview */
   .attachment-preview {
-      padding: 8px;
-      border-top: 1px solid #e9ecef;
-      background: #f8f9fa;
+      padding: 10px 15px;
+      border-top: 1px solid var(--border-color);
+      background-color: var(--bg-light);
+      max-height: 100px;
+      overflow-y: auto;
+  }
+
+  .file-preview {
+      display: flex;
+      align-items: center;
+      padding: 5px 10px;
+      background-color: var(--bg-color);
+      border-radius: 4px;
+      margin-bottom: 5px;
+  }
+
+  .file-preview i {
+      margin-right: 8px;
+      color: var(--primary-color);
+  }
+
+  .message-attachment {
+      display: flex;
+      align-items: center;
+      margin-top: 8px;
+      padding: 5px 10px;
+      background-color: var(--bg-light);
+      border-radius: 4px;
+      width: fit-content;
+  }
+
+  .message-attachment i {
+      margin-right: 8px;
+      color: var(--primary-color);
   }
 
   .attachment-preview .preview-container {
@@ -218,9 +249,9 @@
 
   /* Chat Input Container */
   .chat-input-container {
-      padding: 1.25rem;
+      padding: 10px 15px;
       border-top: 1px solid var(--border-color);
-      background-color: var(--bg-light);
+      background-color: var(--bg-color);
       backdrop-filter: blur(10px);
       position: relative;
       z-index: 2;
@@ -543,7 +574,7 @@
   .delete-conversation-btn [data-feather] {
     vertical-align: middle;
   }
-  
+
   .conversation-item {
     padding: 10px;
     border-bottom: 1px solid var(--border-color);
