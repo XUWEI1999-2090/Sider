@@ -209,16 +209,30 @@ class ChatManager {
 
     async handleMessageSubmit() {
         const content = this.messageInput.value.trim();
+        const hasPdfFile = window.currentPdfFile !== undefined && window.currentPdfFile !== null;
         const hasAttachments = this.attachments && this.attachments.length > 0; // Check for attachments
 
-        if (!content && !hasAttachments) return;
+        if (!content && !hasAttachments && !hasPdfFile) return;
 
+        // 创建用户消息对象
         const userMessage = {
             text: content,
             attachments: hasAttachments ? [...this.attachments] : [], // Use this.attachments
             sender: 'user',
             timestamp: new Date().toISOString()
         };
+
+        // 如果有PDF文件，添加到消息附件中
+        if (hasPdfFile) {
+            if (!userMessage.attachments) {
+                userMessage.attachments = [];
+            }
+            userMessage.attachments.push({
+                name: window.currentPdfFile.name,
+                type: 'pdf',
+                size: window.currentPdfFile.size
+            });
+        }
 
         // Get current conversation
         const conversation = this.getConversationById(this.currentConversationId);
@@ -241,8 +255,16 @@ class ChatManager {
 
         try {
             let response;
-            if (window.currentPdfFile) {
-                response = await processPdfAndGetAnswer(content); // Use content instead of message
+            if (hasPdfFile) {
+                // 显示处理中状态
+                this.renderMessage({
+                    text: "正在处理PDF文件，请稍候...",
+                    sender: 'assistant',
+                    isTemporary: true, // 标记为临时消息
+                    timestamp: new Date().toISOString()
+                });
+                
+                response = await processPdfAndGetAnswer(content);
             } else {
                 const options = {
                     method: 'POST',
@@ -264,6 +286,10 @@ class ChatManager {
                 response = data.choices[0].message.content;
             }
 
+            // 移除临时处理消息
+            const tempMessages = this.chatMessages.querySelectorAll('.temporary-message');
+            tempMessages.forEach(msg => msg.remove());
+
             const aiMessage = {
                 text: response,
                 sender: 'assistant',
@@ -278,7 +304,7 @@ class ChatManager {
         } catch (err) {
             console.error('Error calling LLM API:', err);
             const errorMessage = {
-                text: "Sorry, I encountered an error processing your request.",
+                text: "抱歉，处理您的请求时出错: " + err.message,
                 sender: 'assistant',
                 timestamp: new Date().toISOString()
             };
@@ -292,7 +318,9 @@ class ChatManager {
         if (preview) preview.classList.add('d-none');
         const previewContainer = document.getElementById('previewContainer');
         if (previewContainer) previewContainer.innerHTML = '';
-
+        
+        // 清除PDF文件引用
+        window.currentPdfFile = null;
 
         this.scrollToBottom();
     }
@@ -333,6 +361,9 @@ class ChatManager {
     renderMessage(message) {
         const messageEl = document.createElement('div');
         messageEl.className = `message ${message.sender}`;
+        if (message.isTemporary) {
+            messageEl.className += ' temporary-message';
+        }
         messageEl.style.display = 'block';
         messageEl.style.opacity = '1';
 
@@ -349,23 +380,59 @@ class ChatManager {
             message.attachments.forEach(attachment => {
                 const attachmentElement = document.createElement('div');
                 attachmentElement.className = 'attachment-item';
+                
+                // 文件图标
+                const iconEl = document.createElement('i');
+                
                 if (attachment.type === 'pdf') {
-                  const link = document.createElement('a');
-                  link.href = attachment.url; // Assuming attachment.url contains the URL to the PDF
-                  link.textContent = attachment.name;
-                  link.target = '_blank';
-                  attachmentElement.appendChild(link);
+                    iconEl.setAttribute('data-feather', 'file-text');
+                    attachmentElement.appendChild(iconEl);
+                    
+                    // 文件名
+                    const nameSpan = document.createElement('span');
+                    nameSpan.textContent = attachment.name;
+                    nameSpan.className = 'ms-2';
+                    attachmentElement.appendChild(nameSpan);
+                    
+                    // 文件大小
+                    if (attachment.size) {
+                        const sizeSpan = document.createElement('span');
+                        sizeSpan.textContent = `(${this.formatFileSize(attachment.size)})`;
+                        sizeSpan.className = 'ms-2 text-muted';
+                        attachmentElement.appendChild(sizeSpan);
+                    }
+                } else if (attachment.url) {
+                    // 处理有URL的附件（如图片）
+                    const link = document.createElement('a');
+                    link.href = attachment.url;
+                    link.textContent = attachment.name;
+                    link.target = '_blank';
+                    attachmentElement.appendChild(link);
                 } else {
-                  // Handle other attachment types if needed.
-                  attachmentElement.textContent = attachment.name;
+                    // 处理其他类型附件
+                    iconEl.setAttribute('data-feather', 'paperclip');
+                    attachmentElement.appendChild(iconEl);
+                    attachmentElement.appendChild(document.createTextNode(attachment.name));
                 }
+                
                 attachmentsDiv.appendChild(attachmentElement);
             });
             messageEl.appendChild(attachmentsDiv);
         }
 
-
-        this.messageContainer.appendChild(messageEl);
+        this.chatMessages.appendChild(messageEl);
+        
+        // 初始化Feather图标
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    }
+    
+    // 添加格式化文件大小的辅助方法
+    formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        else return (bytes / 1048576).toFixed(1) + ' MB';
     }
 
     renderConversations(container) {

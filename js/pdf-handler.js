@@ -70,10 +70,8 @@ function handlePdfUpload(file) {
     const attachmentPreview = document.getElementById('attachmentPreview');
     const previewContainer = document.getElementById('previewContainer');
 
-    // 清空之前的文件预览
-    if (!attachmentPreview.classList.contains('d-none')) {
-        attachmentPreview.classList.remove('d-none');
-    }
+    // 确保预览区域可见
+    attachmentPreview.classList.remove('d-none');
 
     // 创建文件预览元素
     const filePreviewDiv = document.createElement('div');
@@ -82,7 +80,7 @@ function handlePdfUpload(file) {
 
     // 创建文件图标
     const fileIconEl = document.createElement('i');
-    fileIconEl.setAttribute('data-feather', 'file');
+    fileIconEl.setAttribute('data-feather', 'file-text');
 
     // 创建文件名元素
     const fileNameEl = document.createElement('span');
@@ -107,6 +105,7 @@ function handlePdfUpload(file) {
 
         // 重置文件输入
         document.getElementById('pdfFileInput').value = '';
+        window.currentPdfFile = null;
     });
 
     // 组装预览元素
@@ -129,6 +128,8 @@ function handlePdfUpload(file) {
 
     // 也将文件对象存储在全局变量中（实际应用中可能需要更好的方式）
     window.currentPdfFile = file;
+    
+    console.log("已选择文件:", file.name);
 }
 
 /**
