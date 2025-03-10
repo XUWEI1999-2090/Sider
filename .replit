@@ -6,7 +6,7 @@ channel = "stable-24_05"
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["sh", "-c", "node index.js"]
+run = ["sh", "-c", "npx http-server . -p 3000 --cors -c-1"]
 
 [workflows]
 runButton = "Project Server"
