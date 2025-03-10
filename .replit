@@ -9,7 +9,7 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "node index.js"]
 
 [workflows]
-runButton = "Project"
+runButton = "API服务器"
 
 [[workflows.workflow]]
 name = "Project"
@@ -34,6 +34,14 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "npx http-server . -p 3000 --cors -c-1"
 waitForPort = 3000
+
+[[workflows.workflow]]
+name = "API服务器"
+author = 40280296
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd Visual && python api_server.py"
 
 [[ports]]
 localPort = 3000
