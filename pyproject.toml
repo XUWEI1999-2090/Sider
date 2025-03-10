@@ -12,4 +12,6 @@ dependencies = [
     "trafilatura>=2.0.0",
     "Pillow>=10.0.0",
     "flask-cors>=4.0.0",
+    "PyMuPDF>=1.21.1",
+    "requests>=2.28.0",
 ]

@@ -9,7 +9,24 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "npx http-server . -p 3000 --cors -c-1"]
 
 [workflows]
-runButton = "Project Server"
+runButton = "运行所有服务"
+
+[[workflows.workflow]]
+name = "运行所有服务"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd Visual && python api_server.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx http-server . -p 8080 --cors -c-1"
+waitForPort = 8080
 
 [[workflows.workflow]]
 name = "Project"
@@ -40,16 +57,22 @@ name = "API服务器"
 author = 40280296
 
 [[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd Visual && pip install flask flask-cors PyMuPDF Pillow requests && python api_server.py"
+args = "cd Visual && python api_server.py"
 
 [[workflows.workflow]]
 name = "API Server"
 author = 40280296
 
 [[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd Visual && pip install flask flask-cors PyMuPDF Pillow requests && python api_server.py"
+args = "cd Visual && python api_server.py"
 
 [[ports]]
 localPort = 3000
