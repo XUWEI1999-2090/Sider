@@ -41,7 +41,7 @@ author = 40280296
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd Visual && python api_server.py"
+args = "cd Visual && pip install flask flask-cors PyMuPDF Pillow requests && python api_server.py"
 
 [[workflows.workflow]]
 name = "API Server"
