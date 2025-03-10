@@ -80,10 +80,10 @@ class PDFHandler {
         if (attachmentPreview) {
             attachmentPreview.classList.remove('d-none');
             
-            // 清空预览区域
+            // 获取预览容器，不清空现有内容
             const previewContainer = document.getElementById('previewContainer');
             if (previewContainer) {
-                previewContainer.innerHTML = '';
+                // 不再清空整个预览区域
                 
                 // 创建文件预览元素
                 const filePreview = document.createElement('div');

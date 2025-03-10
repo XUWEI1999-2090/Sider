@@ -53,7 +53,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         removeBtn.onclick = () => {
             previewContent.remove();
             window.screenshots = window.screenshots.filter(url => url !== screenshotUrl);
-            if (window.screenshots.length === 0) {
+            
+            // 检查是否还有其他预览内容，而不是直接隐藏整个预览区域
+            if (window.screenshots.length === 0 && 
+                !container.querySelector('.file-preview') && 
+                !container.querySelector('.selected-text-preview')) {
                 preview.classList.add('d-none');
             }
         };
