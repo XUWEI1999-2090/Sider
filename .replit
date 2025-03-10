@@ -1,3 +1,4 @@
+
 modules = ["nodejs-20", "web", "python-3.11", "nix"]
 run = "npx http-server . -p 3000 --cors -c-1"
 
@@ -27,15 +28,6 @@ args = "cd Visual && python api_server.py"
 task = "shell.exec"
 args = "npx http-server . -p 8080 --cors -c-1"
 waitForPort = 8080
-
-[[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Project Server"
 
 [[workflows.workflow]]
 name = "Project Server"
