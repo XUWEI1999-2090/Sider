@@ -103,9 +103,8 @@ class PDFHandler {
                 removeBtn.className = 'btn btn-close';
                 removeBtn.innerHTML = '<i data-feather="x"></i>';
                 removeBtn.style.position = 'absolute';
-                removeBtn.style.right = '10px';
-                removeBtn.style.top = '50%';
-                removeBtn.style.transform = 'translateY(-50%)';
+                removeBtn.style.right = '5px';
+                removeBtn.style.top = '5px';
                 removeBtn.style.backgroundColor = 'transparent';
                 removeBtn.style.border = 'none';
                 removeBtn.style.padding = '0';
@@ -117,8 +116,14 @@ class PDFHandler {
                 
                 // 添加删除按钮功能
                 removeBtn.addEventListener('click', () => {
-                    attachmentPreview.classList.add('d-none');
-                    previewContainer.innerHTML = '';
+                    // 只移除当前文件预览
+                    filePreview.remove();
+                    
+                    // 检查是否还有其他附件
+                    if (previewContainer.children.length === 0) {
+                        attachmentPreview.classList.add('d-none');
+                    }
+                    
                     // 重置文件输入，允许再次上传相同文件
                     this.fileInput.value = '';
                 });
