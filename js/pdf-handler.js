@@ -153,50 +153,50 @@ function handlePdfUpload(file) {
 
 /**
  * 发送PDF文件到服务器并获取回答
- * @param {string} message - 用户输入的消息
+ * @param {string} content - 用户输入的消息
  * @returns {Promise<string>} - 处理结果
  */
-async function processPdfAndGetAnswer(message) {
+async function processPdfAndGetAnswer(content) {
     if (!window.currentPdfFile) {
         return "请先上传PDF文件。";
     }
 
     try {
-        // 创建FormData对象
         const formData = new FormData();
         formData.append('file', window.currentPdfFile);
-        formData.append('prompt', message || "这个PDF文档里包含什么信息？");
+        formData.append('prompt', content || "这个PDF文档里包含什么信息？");
 
-        // 显示加载状态
-        const loadingMessage = "正在处理PDF文件，请稍候...";
+        console.log('开始上传PDF文件:', window.currentPdfFile.name);
 
-        // 发送请求到API服务器
-        const response = await fetch('http://0.0.0.0:5001/api/upload-pdf', {
+        const response = await fetch('http://localhost:5001/api/upload-pdf', {
             method: 'POST',
             body: formData
         });
 
+        // 检查响应状态
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || '处理PDF时出错');
+            console.error('服务器响应错误:', response.status, response.statusText);
+            const text = await response.text();
+            console.error('错误响应内容:', text);
+            try {
+                const errorData = JSON.parse(text);
+                throw new Error(errorData.error || '处理PDF时出错');
+            } catch (e) {
+                throw new Error(`服务器错误 (${response.status}): ${text || response.statusText}`);
+            }
         }
 
-        const data = await response.json();
-
-        // 清除当前PDF文件引用
-        window.currentPdfFile = null;
-
-        // 清除预览
-        const attachmentPreview = document.getElementById('attachmentPreview');
-        const previewContainer = document.getElementById('previewContainer');
-        previewContainer.innerHTML = '';
-        attachmentPreview.classList.add('d-none');
-
-        // 重置文件输入
-        document.getElementById('pdfFileInput').value = '';
-
-        return data.answer || "无法从AI获取回答。";
-
+        // 尝试解析JSON响应
+        const text = await response.text();
+        console.log('服务器响应:', text);
+        
+        try {
+            const data = JSON.parse(text);
+            return data.answer || "无法从AI获取回答。";
+        } catch (e) {
+            console.error('JSON解析错误:', e);
+            throw new Error('服务器返回了无效的数据格式');
+        }
     } catch (error) {
         console.error('PDF处理错误:', error);
         return `处理PDF时出错: ${error.message}`;

@@ -7,7 +7,6 @@ class ChatManager {
         this.messageInput = document.getElementById('messageInput');
         this.chatMessages = document.getElementById('chatMessages');
         this.attachmentPreview = document.getElementById('attachmentPreview');
-        this.fileInput = document.getElementById('fileInput'); // Add file input element
 
         this.loadConversations();
         this.setupEventListeners();
@@ -79,9 +78,6 @@ class ChatManager {
                 e.preventDefault();
                 this.handleMessageSubmit();
             }
-        });
-        this.fileInput.addEventListener('change', (e) => {
-            this.handleFileUpload(e);
         });
     }
 
