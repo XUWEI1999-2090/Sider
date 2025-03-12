@@ -377,8 +377,28 @@ class ChatManager {
           this.renderMessage(aiMessage);
       } catch (err) {
           console.error('Error:', err);
+          
+          // 移除临时处理消息
+          const tempMessages = this.chatMessages.querySelectorAll('.temporary-message');
+          tempMessages.forEach(msg => msg.remove());
+          
+          // 提供更友好的错误消息
+          let errorText = "抱歉，处理您的请求时出错";
+          if (err.message) {
+              // 针对常见错误提供更具体的提示
+              if (err.message.includes('API error: 401')) {
+                  errorText += ": API认证失败，可能需要更新API密钥";
+              } else if (err.message.includes('API error: 429')) {
+                  errorText += ": 请求过于频繁，请稍后再试";
+              } else if (err.message.includes('NetworkError') || err.message.includes('Failed to fetch')) {
+                  errorText += ": 网络连接问题，请检查您的网络连接";
+              } else {
+                  errorText += ": " + err.message;
+              }
+          }
+          
           const errorMessage = {
-              text: "抱歉，处理您的请求时出错: " + err.message,
+              text: errorText,
               sender: 'assistant',
               timestamp: new Date().toISOString()
           };
@@ -769,14 +789,33 @@ async function fetchApiResponse(content, isMultimodal = false) {
         }
 
         const data = await response.json();
-        console.log('API响应成功');
+        console.log('API响应成功:', data); // 记录完整响应以便调试
         
-        // 检查响应数据的结构是否完整
-        if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) {
-            throw new Error('API响应格式错误');
+        // 更强健的响应格式检查
+        if (!data) {
+            throw new Error('API返回空响应');
         }
         
-        return data.choices[0].message.content;
+        // 处理不同API可能返回的不同格式
+        if (data.choices && data.choices[0]) {
+            if (data.choices[0].message && data.choices[0].message.content) {
+                return data.choices[0].message.content;
+            } else if (data.choices[0].text) {
+                return data.choices[0].text;
+            } else if (data.choices[0].content) {
+                return data.choices[0].content;
+            }
+        } else if (data.content) {
+            return data.content;
+        } else if (data.text) {
+            return data.text;
+        } else if (data.message) {
+            return typeof data.message === 'string' ? data.message : JSON.stringify(data.message);
+        }
+        
+        // 如果无法找到有效内容，记录错误并返回格式化的响应
+        console.error('无法解析API响应:', data);
+        throw new Error(`API响应格式错误: ${JSON.stringify(data).substring(0, 100)}...`);
     } catch (error) {
         console.error('Error fetching API response:', error);
         throw error;
