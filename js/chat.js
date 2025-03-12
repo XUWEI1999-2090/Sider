@@ -72,14 +72,18 @@ class ChatManager {
 
   setupEventListeners() {
       this.messageForm.addEventListener('submit', (e) => {
-          e.preventDefault();
+          e.preventDefault(); // 阻止表单默认行为
+          e.stopPropagation(); // 停止事件冒泡
           this.handleMessageSubmit();
+          return false; // 确保不会继续传播
       });
 
       this.messageInput.addEventListener('keypress', (e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
+              e.stopPropagation();
               this.handleMessageSubmit();
+              return false;
           }
       });
   }
