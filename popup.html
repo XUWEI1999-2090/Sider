@@ -7,6 +7,12 @@
     <link href="lib/bootstrap.min.css" rel="stylesheet">
     <link href="lib/feather.css" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
+    <!-- PDF.js 库 -->
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script>
+        // 设置PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    </script>
 </head>
 <body class="sidebar">
     <div class="sidebar-container" style="width: 100%; height: 100vh; padding: 0; margin: 0; overflow: hidden;">
