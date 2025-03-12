@@ -305,24 +305,27 @@ class ChatManager {
                   text: prompt || "请分析文件内容，并总结主要信息"
               }];
 
-              // 处理PDF文件
+              // 处理PDF文件 - 使用PDF转图像方法，类似于test_multimodal.py的处理方式
               if (hasPdfFile && window.currentPdfFile) {
-                  const pdfBase64 = await new Promise((resolve, reject) => {
-                      const reader = new FileReader();
-                      reader.onload = () => {
-                          const base64 = reader.result.split(',')[1];
-                          resolve(base64);
-                      };
-                      reader.onerror = reject;
-                      reader.readAsDataURL(window.currentPdfFile);
-                  });
-
-                  content.push({
-                      type: "image_url",
-                      image_url: {
-                          url: `data:application/pdf;base64,${pdfBase64}`
-                      }
-                  });
+                  console.log('正在将PDF转换为图像...');
+                  // 确保PDF处理库已加载
+                  if (typeof window.pdfToImages === 'undefined') {
+                      throw new Error('PDF处理库未加载，请确保pdf-to-images.js已正确引入');
+                  }
+                  
+                  // 将PDF转换为图像
+                  const pageImages = await window.pdfToImages.convertPdfToImages(window.currentPdfFile);
+                  console.log(`成功将PDF转换为${pageImages.length}张图像`);
+                  
+                  // 添加每一页图像到内容数组
+                  for (const page of pageImages) {
+                      content.push({
+                          type: "image_url",
+                          image_url: {
+                              url: page.dataUrl
+                          }
+                      });
+                  }
               }
 
               // 处理图片附件
