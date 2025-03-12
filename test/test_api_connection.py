@@ -4,7 +4,7 @@ import json
 response = requests.post(
   url="https://openrouter.ai/api/v1/chat/completions",
   headers={
-    "Authorization": "Bearer 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",
+    "Authorization": "Bearer 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",
     "Content-Type": "application/json",
     "HTTP-Referer": "<YOUR_SITE_URL>", # Optional. Site URL for rankings on openrouter.ai.
     "X-Title": "<YOUR_SITE_NAME>", # Optional. Site title for rankings on openrouter.ai.

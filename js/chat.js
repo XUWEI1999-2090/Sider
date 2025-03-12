@@ -3,6 +3,7 @@ class ChatManager {
         this.conversations = [];
         this.currentConversationId = null;
         this.currentModelType = 'text'; // 默认使用文本模型
+        this.attachments = []; // 添加这行，初始化attachments数组
 
         this.messageForm = document.getElementById('messageForm');
         this.messageInput = document.getElementById('messageInput');
@@ -217,11 +218,11 @@ class ChatManager {
     }
 
     async handleMessageSubmit() {
-        const content = this.messageInput.value.trim();
+        const prompt = this.messageInput.value.trim();
         const hasPdfFile = window.currentPdfFile !== undefined && window.currentPdfFile !== null;
         const hasAttachments = this.attachments && this.attachments.length > 0;
 
-        if (!content && !hasAttachments && !hasPdfFile) return;
+        if (!prompt && !hasAttachments && !hasPdfFile) return;
 
         const conversation = this.getConversationById(this.currentConversationId);
         if (!conversation) return;
@@ -234,7 +235,7 @@ class ChatManager {
 
         // 创建用户消息对象
         const userMessage = {
-            text: content,
+            text: prompt,
             attachments: hasAttachments ? [...this.attachments] : [],
             sender: 'user',
             timestamp: new Date().toISOString()
@@ -258,7 +259,7 @@ class ChatManager {
 
         // Update title if this is the first message
         if (conversation.messages.length === 1) {
-            this.updateConversationTitle(this.currentConversationId, content);
+            this.updateConversationTitle(this.currentConversationId, prompt);
         }
 
         this.saveConversations();
@@ -272,67 +273,91 @@ class ChatManager {
             const isMultimodal = conversation.modelType === 'multimodal';
             
             if (hasPdfFile || hasAttachments) {
-                // 处理附件，使用 OpenRouter API
                 this.renderMessage({
-                    text: "正在处理附件，请稍候...",
+                    text: "正在处理文件，请稍候...",
                     sender: 'assistant',
                     isTemporary: true,
                     timestamp: new Date().toISOString()
                 });
-                
+
                 try {
-                    const formData = new FormData();
+                    const content = [{
+                        type: "text",
+                        text: prompt || "请分析文件内容，并总结主要信息"
+                    }];
                     
-                    if (hasPdfFile) {
-                        // 创建文件的副本而不是直接使用原文件
-                        const pdfBlob = new Blob([await window.currentPdfFile.arrayBuffer()], 
-                            { type: window.currentPdfFile.type });
-                        formData.append('file', pdfBlob, window.currentPdfFile.name);
-                        console.log('添加PDF文件副本到请求:', window.currentPdfFile.name);
+                    // 处理PDF文件
+                    if (hasPdfFile && window.currentPdfFile) {
+                        const pdfBase64 = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                                const base64 = reader.result.split(',')[1];
+                                resolve(base64);
+                            };
+                            reader.onerror = reject;
+                            reader.readAsDataURL(window.currentPdfFile);
+                        });
+                        
+                        content.push({
+                            type: "image_url",
+                            image_url: {
+                                url: `data:application/pdf;base64,${pdfBase64}`
+                            }
+                        });
                     }
                     
-                    if (hasAttachments) {
-                        // 同样为附件创建副本
-                        for (let i = 0; i < this.attachments.length; i++) {
-                            const attachment = this.attachments[i];
-                            const attachmentBlob = new Blob([await attachment.arrayBuffer()],
-                                { type: attachment.type });
-                            formData.append(`attachment${i}`, attachmentBlob, attachment.name);
+                    // 处理图片附件
+                    if (hasAttachments && this.attachments) {
+                        for (const attachment of this.attachments) {
+                            if (attachment && attachment.type && attachment.type.startsWith('image/')) {
+                                const base64 = await new Promise((resolve, reject) => {
+                                    const reader = new FileReader();
+                                    reader.onload = () => {
+                                        const base64 = reader.result.split(',')[1];
+                                        resolve(base64);
+                                    };
+                                    reader.onerror = reject;
+                                    reader.readAsDataURL(attachment);
+                                });
+                                
+                                content.push({
+                                    type: "image_url",
+                                    image_url: {
+                                        url: `data:${attachment.type};base64,${base64}`
+                                    }
+                                });
+                            }
                         }
                     }
                     
-                    formData.append('prompt', content || "请分析文件内容，并总结主要信息");
-                    formData.append('modelType', 'multimodal');
-
-                    console.log('发送多模态请求...');
-                    const res = await fetch('http://localhost:5001/api/query', {
+                    // 直接调用 OpenRouter API
+                    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                         method: 'POST',
-                        body: formData
+                        headers: {
+                            'Authorization': 'Bearer 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',
+                            'Content-Type': 'application/json',
+                            'HTTP-Referer': 'https://localhost:5001',
+                            'X-Title': 'Sider Chat'
+                        },
+                        body: JSON.stringify({
+                            model: "qwen/qwen2.5-vl-72b-instruct:free",
+                            messages: [{
+                                role: "user",
+                                content: content
+                            }]
+                        })
                     });
 
                     if (!res.ok) {
-                        throw new Error(`HTTP error! status: ${res.status}`);
+                        throw new Error(`API error: ${res.status}`);
                     }
 
                     const data = await res.json();
-                    console.log('收到多模态响应:', data);
-
-                    if (data.error) {
-                        throw new Error(data.error);
-                    }
-
-                    response = data.answer;
+                    response = data.response;  // 直接使用 response 字段
+                    
                 } catch (error) {
                     console.error('文件处理错误:', error);
-                    const errorMessage = {
-                        text: "抱歉，文件处理出错。请确保文件未被其他程序打开，然后重试。",
-                        sender: 'assistant',
-                        timestamp: new Date().toISOString()
-                    };
-                    conversation.messages.push(errorMessage);
-                    this.saveConversations();
-                    this.renderMessage(errorMessage);
-                    return;
+                    throw new Error(`文件处理错误: ${error.message}`);
                 }
             } else {
                 // 纯文本对话
@@ -352,7 +377,7 @@ class ChatManager {
                         model: "qwen/qwen2.5-vl-72b-instruct:free",
                         messages: [{
                             role: "user",
-                            content: content
+                            content: prompt
                         }]
                     })
                 } : {
@@ -365,7 +390,7 @@ class ChatManager {
                         model: "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
                         messages: [{
                             role: "user",
-                            content: content
+                            content: prompt
                         }]
                     })
                 };
@@ -391,7 +416,7 @@ class ChatManager {
             this.saveConversations();
             this.renderMessage(aiMessage);
         } catch (err) {
-            console.error('Error calling API:', err);
+            console.error('Error:', err);
             const errorMessage = {
                 text: "抱歉，处理您的请求时出错: " + err.message,
                 sender: 'assistant',
@@ -402,6 +427,8 @@ class ChatManager {
             this.renderMessage(errorMessage);
         }
 
+        // 清理附件
+        this.attachments = []; // 重置为空数组而不是 null
         // 清理附件和选中文本
         const preview = document.getElementById('attachmentPreview');
         if (preview) preview.classList.add('d-none');
@@ -676,6 +703,10 @@ class ChatManager {
         if (file) {
             const reader = new FileReader();
             reader.onload = (event) => {
+                // 确保 attachments 是数组
+                if (!this.attachments) {
+                    this.attachments = [];
+                }
                 this.attachments = [{name: file.name, type: file.type, url: event.target.result}];
                 this.renderAttachmentPreview(event.target.result);
             };
@@ -689,6 +720,16 @@ class ChatManager {
             preview.innerHTML = `<img src="${dataUrl}" alt="Attachment Preview">`;
             preview.classList.remove('d-none');
         }
+    }
+
+    // 辅助函数：将Blob转换为base64
+    async blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
     }
 }
 
