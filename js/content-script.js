@@ -1,25 +1,39 @@
 // Content script for interacting with web pages
 console.log('Content script loaded');
 
-// Add keyboard shortcut to open sidebar
-document.addEventListener('keydown', function(e) {
-    // Ctrl/Cmd + Shift + S to toggle sidebar
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 's') {
-        chrome.runtime.sendMessage({ type: 'OPEN_SIDEBAR' });
+// 避免影响页面布局，检查是否是我们想要修改的页面
+function shouldModifyPage() {
+    // 这里可以添加逻辑判断当前页面是否应该被修改
+    // 例如，检查URL是否包含特定域名
+    // 如果您不想在Claude页面上运行，可以加这个判断
+    if (window.location.href.includes('claude.ai')) {
+        return false;
     }
-});
+    return true; // 默认情况下不修改页面
+}
 
-// 处理文本选择
-document.addEventListener('mouseup', function(e) {
-    const selectedText = window.getSelection().toString().trim();
-    if (selectedText.length > 0) {
-        // 只有当文本被选中时才发送消息
-        chrome.runtime.sendMessage({
-            type: 'SELECTED_TEXT',
-            text: selectedText
-        });
-    }
-});
+// 只有在应该修改页面的情况下添加事件监听器
+if (shouldModifyPage()) {
+    // Add keyboard shortcut to open sidebar
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + Shift + S to toggle sidebar
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 's') {
+            chrome.runtime.sendMessage({ type: 'OPEN_SIDEBAR' });
+        }
+    });
+
+    // 处理文本选择
+    document.addEventListener('mouseup', function(e) {
+        const selectedText = window.getSelection().toString().trim();
+        if (selectedText.length > 0) {
+            // 只有当文本被选中时才发送消息
+            chrome.runtime.sendMessage({
+                type: 'SELECTED_TEXT',
+                text: selectedText
+            });
+        }
+    });
+}
 
 // Screenshot overlay functionality
 let screenshotOverlay = null;

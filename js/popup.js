@@ -152,11 +152,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            // 否则创建新对话
-            window.chatManager.createNewConversation();
+            // 清空当前消息显示区域
+            const chatMessages = document.getElementById('chatMessages');
+            if (chatMessages) {
+                chatMessages.innerHTML = '';
+            }
+            
+            // 创建新对话
+            const newConversation = window.chatManager.createNewConversation();
+            console.log('创建新对话ID:', newConversation.id);
             
             // 关闭历史面板
             historyPanel.classList.remove('active');
+            
+            // 确保焦点回到输入框
+            setTimeout(() => {
+                const messageInput = document.getElementById('messageInput');
+                if (messageInput) {
+                    messageInput.focus();
+                }
+            }, 100);
         }
     }
 

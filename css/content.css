@@ -1,0 +1,24 @@
+
+/* 这个文件专门用于内容脚本，以避免影响被注入页面的样式 */
+/* 所有样式都应该有特定的前缀，以避免与页面样式冲突 */
+
+.ai-chat-selected-text {
+    background-color: rgba(13, 110, 253, 0.2);
+    border-radius: 2px;
+    padding: 2px 0;
+  }
+  
+  /* 添加前缀以避免CSS冲突 */
+  #ai-chat-selection-indicator {
+    position: fixed;
+    z-index: 10000;
+    padding: 5px 10px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  

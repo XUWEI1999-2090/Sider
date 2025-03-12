@@ -14,7 +14,7 @@ def query_qwen(content):
     response = requests.post(
         url="https://openrouter.ai/api/v1/chat/completions",
         headers={
-            "Authorization": "Bearer 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",
+            "Authorization": "Bearer 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",
             "Content-Type": "application/json",
             "HTTP-Referer": "<YOUR_SITE_URL>",  # Optional. Site URL for rankings on openrouter.ai.
             "X-Title": "<YOUR_SITE_NAME>",  # Optional. Site title for rankings on openrouter.ai.

@@ -2,10 +2,12 @@ class ChatManager {
     constructor() {
         this.conversations = [];
         this.currentConversationId = null;
+        this.currentModelType = 'text'; // 默认使用文本模型
 
         this.messageForm = document.getElementById('messageForm');
         this.messageInput = document.getElementById('messageInput');
         this.chatMessages = document.getElementById('chatMessages');
+        this.messageContainer = document.getElementById('chatMessages'); // 添加这一行
         this.attachmentPreview = document.getElementById('attachmentPreview');
 
         this.loadConversations();
@@ -87,15 +89,26 @@ class ChatManager {
             title: '新对话',
             messages: [],
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
+            modelType: 'text' // 新增字段，标记对话使用的模型类型
         };
 
         // Add to beginning of array (most recent first)
         this.conversations.unshift(newConversation);
         this.currentConversationId = newConversation.id;
 
+        // 先保存会话
         this.saveConversations();
+        
+        // 清空聊天消息显示
+        if (this.chatMessages) {
+            this.chatMessages.innerHTML = '';
+        }
+        
+        // 加载当前会话
         this.loadCurrentConversation();
+        
+        console.log('创建新对话:', newConversation.id);
         return newConversation;
     }
 
@@ -206,14 +219,23 @@ class ChatManager {
     async handleMessageSubmit() {
         const content = this.messageInput.value.trim();
         const hasPdfFile = window.currentPdfFile !== undefined && window.currentPdfFile !== null;
-        const hasAttachments = this.attachments && this.attachments.length > 0; // Check for attachments
+        const hasAttachments = this.attachments && this.attachments.length > 0;
 
         if (!content && !hasAttachments && !hasPdfFile) return;
+
+        const conversation = this.getConversationById(this.currentConversationId);
+        if (!conversation) return;
+
+        // 确定是否需要切换到多模态模型
+        if (conversation.modelType === 'text' && (hasAttachments || hasPdfFile)) {
+            conversation.modelType = 'multimodal';
+            this.saveConversations();
+        }
 
         // 创建用户消息对象
         const userMessage = {
             text: content,
-            attachments: hasAttachments ? [...this.attachments] : [], // Use this.attachments
+            attachments: hasAttachments ? [...this.attachments] : [],
             sender: 'user',
             timestamp: new Date().toISOString()
         };
@@ -229,10 +251,6 @@ class ChatManager {
                 size: window.currentPdfFile.size
             });
         }
-
-        // Get current conversation
-        const conversation = this.getConversationById(this.currentConversationId);
-        if (!conversation) return;
 
         // Update conversation
         conversation.messages.push(userMessage);
@@ -251,24 +269,93 @@ class ChatManager {
 
         try {
             let response;
-            if (hasPdfFile) {
-                // 显示处理中状态
+            const isMultimodal = conversation.modelType === 'multimodal';
+            
+            if (hasPdfFile || hasAttachments) {
+                // 处理附件，使用 OpenRouter API
                 this.renderMessage({
-                    text: "正在处理PDF文件，请稍候...",
+                    text: "正在处理附件，请稍候...",
                     sender: 'assistant',
-                    isTemporary: true, // 标记为临时消息
+                    isTemporary: true,
                     timestamp: new Date().toISOString()
                 });
                 
-                // 等待PDF处理并获取答案
                 try {
-                    response = await processPdfAndGetAnswer(content);
+                    const formData = new FormData();
+                    
+                    if (hasPdfFile) {
+                        // 创建文件的副本而不是直接使用原文件
+                        const pdfBlob = new Blob([await window.currentPdfFile.arrayBuffer()], 
+                            { type: window.currentPdfFile.type });
+                        formData.append('file', pdfBlob, window.currentPdfFile.name);
+                        console.log('添加PDF文件副本到请求:', window.currentPdfFile.name);
+                    }
+                    
+                    if (hasAttachments) {
+                        // 同样为附件创建副本
+                        for (let i = 0; i < this.attachments.length; i++) {
+                            const attachment = this.attachments[i];
+                            const attachmentBlob = new Blob([await attachment.arrayBuffer()],
+                                { type: attachment.type });
+                            formData.append(`attachment${i}`, attachmentBlob, attachment.name);
+                        }
+                    }
+                    
+                    formData.append('prompt', content || "请分析文件内容，并总结主要信息");
+                    formData.append('modelType', 'multimodal');
+
+                    console.log('发送多模态请求...');
+                    const res = await fetch('http://localhost:5001/api/query', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    }
+
+                    const data = await res.json();
+                    console.log('收到多模态响应:', data);
+
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+
+                    response = data.answer;
                 } catch (error) {
-                    console.error("PDF处理错误:", error);
-                    response = "PDF处理失败: " + error.message;
+                    console.error('文件处理错误:', error);
+                    const errorMessage = {
+                        text: "抱歉，文件处理出错。请确保文件未被其他程序打开，然后重试。",
+                        sender: 'assistant',
+                        timestamp: new Date().toISOString()
+                    };
+                    conversation.messages.push(errorMessage);
+                    this.saveConversations();
+                    this.renderMessage(errorMessage);
+                    return;
                 }
             } else {
-                const options = {
+                // 纯文本对话
+                const apiEndpoint = isMultimodal ? 
+                    "https://openrouter.ai/api/v1/chat/completions" :
+                    "https://api.siliconflow.cn/v1/chat/completions";
+                
+                const options = isMultimodal ? {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer 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',
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': 'YOUR_SITE_URL',
+                        'X-Title': 'YOUR_SITE_NAME'
+                    },
+                    body: JSON.stringify({
+                        model: "qwen/qwen2.5-vl-72b-instruct:free",
+                        messages: [{
+                            role: "user",
+                            content: content
+                        }]
+                    })
+                } : {
                     method: 'POST',
                     headers: {
                         'Authorization': 'Bearer sk-rebktjhdywuqfmulddzhdygglyrkeengnhlshvejdveeuwdw',
@@ -283,7 +370,7 @@ class ChatManager {
                     })
                 };
 
-                const res = await fetch('https://api.siliconflow.cn/v1/chat/completions', options);
+                const res = await fetch(apiEndpoint, options);
                 const data = await res.json();
                 response = data.choices[0].message.content;
             }
@@ -304,7 +391,7 @@ class ChatManager {
             this.saveConversations();
             this.renderMessage(aiMessage);
         } catch (err) {
-            console.error('Error calling LLM API:', err);
+            console.error('Error calling API:', err);
             const errorMessage = {
                 text: "抱歉，处理您的请求时出错: " + err.message,
                 sender: 'assistant',
