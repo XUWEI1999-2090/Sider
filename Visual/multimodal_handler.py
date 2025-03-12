@@ -1,5 +1,4 @@
 import os
-import sys
 import tempfile
 import base64
 from io import BytesIO
@@ -8,8 +7,6 @@ from werkzeug.utils import secure_filename
 import fitz
 from PIL import Image
 
-# API密钥
-API_KEY = "sk-rebktjhdywuqfmulddzhdygglyrkeengnhlshvejdveeuwdw"
 
 def has_attachment(request):
     """检查请求是否包含附件"""
@@ -23,32 +20,6 @@ def is_image(file):
     """检查文件是否为图像"""
     allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp']
     return any(file.filename.lower().endswith(ext) for ext in allowed_extensions)
-
-def save_temp_file(file):
-    """将上传的文件保存到临时目录"""
-    temp_dir = tempfile.mkdtemp()
-    file_path = os.path.join(temp_dir, secure_filename(file.filename))
-    file.save(file_path)
-    return file_path, temp_dir
-
-def image_to_base64(image_path):
-    """将图像转换为base64编码"""
-    with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode('utf-8')
-    
-def convert_pdf_to_base64_images(pdf_path):
-    """Convert PDF pages to base64 encoded images"""
-    images = []
-    doc = fitz.open(pdf_path)
-    for page_num in range(len(doc)):
-        page = doc.load_page(page_num)
-        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
-        img_bytes = BytesIO()
-        pix.save(img_bytes, "png")
-        img_bytes.seek(0)
-        images.append(base64.b64encode(img_bytes.getvalue()).decode())
-    doc.close()
-    return images
 
 def process_request(request):
     """处理请求，根据请求类型路由到相应的处理函数"""
@@ -105,17 +76,17 @@ def process_request(request):
                                         "url": f"data:image/png;base64,{img_base64}"
                                     }
                                 })
-                                print(f"成功处理第 {page_num + 1} 页")
+                                print(f"✅ 成功处理第 {page_num + 1} 页")
                                 
                             except Exception as e:
-                                print(f"处理第 {page_num + 1} 页时出错: {str(e)}")
+                                print(f"❌ 处理第 {page_num + 1} 页时出错: {str(e)}")
                                 continue
                         
                         doc.close()
-                        print(f"PDF处理完成，共转换 {len(content) - 1} 张图片")
+                        print(f"✅ PDF处理完成，共转换 {len(content) - 1} 张图片")
                         
                     except Exception as e:
-                        print(f"PDF处理错误: {str(e)}")
+                        print(f"❌ PDF处理错误: {str(e)}")
                         return {"error": f"PDF处理错误: {str(e)}"}, 500
                         
                 elif is_image(file):
@@ -130,7 +101,7 @@ def process_request(request):
                             }
                         })
                     except Exception as e:
-                        print(f"图片处理错误: {str(e)}")
+                        print(f"❌ 图片处理错误: {str(e)}")
                         return {"error": f"图片处理错误: {str(e)}"}, 500
             
             # 调用 OpenRouter API
@@ -182,7 +153,7 @@ def process_request(request):
             except Exception as e:
                 return {"error": f"调用文本模型出错: {str(e)}"}, 500
     except Exception as e:
-        print(f"处理请求时发生错误: {str(e)}")
+        print(f"❌ 处理请求时发生错误: {str(e)}")
         return {"error": f"处理请求时出错: {str(e)}"}, 500
 
 def call_text_llm(prompt):
