@@ -522,6 +522,9 @@ class ChatManager {
       if (typeof feather !== 'undefined') {
           feather.replace();
       }
+      
+      // 每次添加消息后立即滚动到底部
+      this.scrollToBottom();
   }
 
   // 添加格式化文件大小的辅助方法
@@ -652,7 +655,15 @@ class ChatManager {
 
   scrollToBottom() {
       if (this.messageContainer) {
-          this.messageContainer.scrollTop = this.messageContainer.scrollHeight;
+          // 使用setTimeout确保滚动在DOM更新后执行
+          setTimeout(() => {
+              this.messageContainer.scrollTop = this.messageContainer.scrollHeight;
+              
+              // 双重保险：如果第一次滚动不成功，再尝试一次
+              setTimeout(() => {
+                  this.messageContainer.scrollTop = this.messageContainer.scrollHeight;
+              }, 100);
+          }, 10);
       }
   }
 
