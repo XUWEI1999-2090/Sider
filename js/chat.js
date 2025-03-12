@@ -355,6 +355,11 @@ class ChatManager {
               response = await fetchApiResponse({ text: prompt }, false);
           }
 
+          // 安全检查：确保我们有有效的响应
+          if (!response) {
+              throw new Error("API返回了空响应");
+          }
+
           // 移除临时处理消息
           const tempMessages = this.chatMessages.querySelectorAll('.temporary-message');
           tempMessages.forEach(msg => msg.remove());
@@ -745,6 +750,8 @@ async function fetchApiResponse(content, isMultimodal = false) {
         "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B";
 
     try {
+        console.log('调用' + (isMultimodal ? 'Qwen' : 'DeepSeek') + ' API...');
+        
         const response = await fetch(apiEndpoint, {
             method: 'POST',
             headers,
@@ -762,7 +769,13 @@ async function fetchApiResponse(content, isMultimodal = false) {
         }
 
         const data = await response.json();
-        console.log('API Response:', data);
+        console.log('API响应成功');
+        
+        // 检查响应数据的结构是否完整
+        if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) {
+            throw new Error('API响应格式错误');
+        }
+        
         return data.choices[0].message.content;
     } catch (error) {
         console.error('Error fetching API response:', error);
