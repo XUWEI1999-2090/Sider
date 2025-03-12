@@ -152,7 +152,7 @@ function handlePdfUpload(file) {
 }
 
 /**
- * 发送PDF文件到服务器并获取回答
+ * 直接在浏览器中处理PDF文件并获取回答
  * @param {string} content - 用户输入的消息
  * @returns {Promise<string>} - 处理结果
  */
@@ -162,41 +162,66 @@ async function processPdfAndGetAnswer(content) {
     }
 
     try {
-        const formData = new FormData();
-        formData.append('file', window.currentPdfFile);
-        formData.append('prompt', content || "这个PDF文档里包含什么信息？");
+        console.log('开始处理PDF文件:', window.currentPdfFile.name);
+        
+        // 显示处理状态
+        const statusMessage = "正在处理PDF文件，请稍候...";
+        const tempMessage = { role: 'assistant', content: statusMessage };
+        // 如果存在消息显示函数，则显示临时消息
+        if (window.chatManager && window.chatManager.displayMessage) {
+            window.chatManager.displayMessage(tempMessage);
+        }
+        
+        // 第1步：将PDF转换为图像
+        const pageImages = await window.pdfToImages.convertPdfToImages(window.currentPdfFile);
+        console.log('✓ PDF转换为图像完成，共获取', pageImages.length, '页');
+        
+        // 第2步：准备多模态内容格式
+        const prompt = content || "这个PDF文档里包含什么信息？";
+        const multimodalContent = window.pdfToImages.prepareMultimodalContent(pageImages, prompt);
+        console.log('✓ 多模态内容准备完成:', multimodalContent.length, '个元素');
+        
+        // 第3步：调用API
+        console.log('开始调用模型API...');
+        
+        // 使用配置文件中的 API 信息
+        const apiUrl = window.apiConfig.endpoint;
+        const apiKey = window.apiConfig.apiKey;
 
-        console.log('开始上传PDF文件:', window.currentPdfFile.name);
-
-        const response = await fetch('http://localhost:5001/api/upload-pdf', {
+        const response = await fetch(apiUrl, {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': apiKey ? `Bearer ${apiKey}` : undefined
+            },
+            body: JSON.stringify({
+                model: window.apiConfig.model,
+                messages: [
+                    {
+                        role: 'user',
+                        content: multimodalContent
+                    }
+                ],
+                max_tokens: window.apiConfig.maxTokens
+            })
         });
 
         // 检查响应状态
         if (!response.ok) {
-            console.error('服务器响应错误:', response.status, response.statusText);
-            const text = await response.text();
-            console.error('错误响应内容:', text);
-            try {
-                const errorData = JSON.parse(text);
-                throw new Error(errorData.error || '处理PDF时出错');
-            } catch (e) {
-                throw new Error(`服务器错误 (${response.status}): ${text || response.statusText}`);
-            }
+            console.error('API响应错误:', response.status, response.statusText);
+            const errorText = await response.text();
+            console.error('错误响应内容:', errorText);
+            return `调用API时出错 (${response.status}): ${errorText || response.statusText}`;
         }
 
-        // 尝试解析JSON响应
-        const text = await response.text();
-        console.log('服务器响应:', text);
+        // 解析API响应
+        const data = await response.json();
+        console.log('✓ API响应成功:', data);
         
-        try {
-            const data = JSON.parse(text);
-            return data.answer || "无法从AI获取回答。";
-        } catch (e) {
-            console.error('JSON解析错误:', e);
-            throw new Error('服务器返回了无效的数据格式');
-        }
+        // 提取回答内容
+        const answer = data.choices?.[0]?.message?.content || "无法从API获取有效回答。";
+        return answer;
+        
     } catch (error) {
         console.error('PDF处理错误:', error);
         return `处理PDF时出错: ${error.message}`;
