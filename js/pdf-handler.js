@@ -37,6 +37,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // 添加到预览区域
             const previewContainer = document.getElementById('previewContainer');
             const attachmentPreview = document.getElementById('attachmentPreview');
+            const processingIndicator = document.getElementById('processingIndicator');
+            
+            // 确保处理指示器隐藏
+            if (processingIndicator) {
+                processingIndicator.classList.add('d-none');
+            }
             
             if (previewContainer && attachmentPreview) {
                 // 显示预览区域

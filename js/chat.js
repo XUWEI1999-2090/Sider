@@ -428,7 +428,8 @@ class ChatManager {
 
       // 清理附件
       this.attachments = []; // 重置为空数组而不是 null
-      // 清理附件和选中文本
+      
+      // 清理附件和选中文本，只隐藏而不清空内容
       const preview = document.getElementById('attachmentPreview');
       if (preview) preview.classList.add('d-none');
       const previewContainer = document.getElementById('previewContainer');
@@ -437,7 +438,19 @@ class ChatManager {
       // 清除PDF文件引用
       window.currentPdfFile = null;
 
+      // 确保聊天区域可见
+      const chatMessagesContainer = document.getElementById('chatMessages');
+      if (chatMessagesContainer) {
+          chatMessagesContainer.classList.remove('d-none');
+      }
+      
+      // 确保滚动到底部显示最新消息
       this.scrollToBottom();
+      
+      // 确保消息输入框重新获得焦点
+      if (this.messageInput) {
+          this.messageInput.focus();
+      }
   }
 
   saveConversations() {
