@@ -1,5 +1,4 @@
-
-modules = ["nodejs-20", "web", "python-3.11", "nix"]
+modules = ["nodejs-20", "python-3.11", "web", "nix"]
 run = "npx http-server . -p 3000 --cors -c-1"
 
 [nix]
