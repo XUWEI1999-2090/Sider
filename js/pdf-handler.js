@@ -26,35 +26,62 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             console.log('已选择文件:', file.name);
             
-            // 显示处理指示器
-            if (processingIndicator) {
-                processingIndicator.classList.remove('d-none');
-            }
+            // 不再显示处理指示器，只显示附件预览
             
             // 如果当前有选中的文本，添加到消息中
             let selectedTexts = window.selectedTexts || [];
             
-            // 添加到消息区域
-            if (window.chatManager) {
-                // 创建消息对象
-                const message = {
-                    text: '',
-                    attachments: [{
-                        name: file.name,
-                        type: 'pdf',
-                        size: file.size
-                    }],
-                    sender: 'user',
-                    timestamp: new Date().toISOString()
+            // 存储PDF文件到全局变量，以便在chat.js中处理
+            window.currentPdfFile = file;
+            
+            // 添加到预览区域
+            const previewContainer = document.getElementById('previewContainer');
+            const attachmentPreview = document.getElementById('attachmentPreview');
+            
+            if (previewContainer && attachmentPreview) {
+                // 显示预览区域
+                attachmentPreview.classList.remove('d-none');
+                
+                // 创建预览元素
+                const previewContent = document.createElement('div');
+                previewContent.className = 'preview-content file-preview';
+                
+                const iconEl = document.createElement('i');
+                iconEl.setAttribute('data-feather', 'file-text');
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = file.name;
+                nameSpan.className = 'ms-2';
+                
+                const sizeSpan = document.createElement('span');
+                sizeSpan.textContent = `(${formatFileSize(file.size)})`;
+                sizeSpan.className = 'ms-2 text-muted';
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'btn btn-close';
+                removeBtn.innerHTML = '<i data-feather="x"></i>';
+                
+                previewContent.appendChild(iconEl);
+                previewContent.appendChild(nameSpan);
+                previewContent.appendChild(sizeSpan);
+                previewContent.appendChild(removeBtn);
+                previewContainer.appendChild(previewContent);
+                
+                // 设置删除按钮事件
+                removeBtn.onclick = () => {
+                    previewContent.remove();
+                    window.currentPdfFile = null;
+                    
+                    // 如果没有其他预览内容，隐藏整个预览区域
+                    if (!previewContainer.querySelector('.preview-content')) {
+                        attachmentPreview.classList.add('d-none');
+                    }
                 };
                 
-                // 添加消息并保存
-                window.chatManager.addMessage(message);
-                window.chatManager.updateConversation({ modelType: 'multimodal' });
-                window.chatManager.saveConversations();
-                
-                // 处理PDF文件
-                await processPdfFile(file, selectedTexts);
+                // 初始化Feather图标
+                if (typeof feather !== 'undefined') {
+                    feather.replace();
+                }
             }
             
             // 清空文件输入
@@ -63,54 +90,27 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('文件处理错误:', error);
             
-            // 添加错误消息
-            if (window.chatManager) {
-                const errorMessage = {
-                    text: `抱歉，处理您的请求时出错: ${error.message || '未知错误'}`,
-                    sender: 'assistant',
-                    timestamp: new Date().toISOString()
-                };
-                window.chatManager.addMessage(errorMessage);
-                window.chatManager.saveConversations();
-            }
+            window.currentPdfFile = null;
             
-            // 隐藏处理指示器
+            // 隐藏处理指示器（以防万一）
             if (processingIndicator) {
                 processingIndicator.classList.add('d-none');
             }
         }
     });
     
-    // 处理PDF文件
+    // 文件大小格式化辅助函数
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      else return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+    
+    // 处理PDF文件 - 现在只用于处理发送按钮点击后的操作
     async function processPdfFile(file, selectedTexts) {
         console.log('处理PDF文件:', file.name);
-        
-        try {
-            // 存储PDF文件到全局变量，以便在chat.js中处理
-            window.currentPdfFile = file;
-            
-            // 隐藏处理指示器
-            if (processingIndicator) {
-                processingIndicator.classList.add('d-none');
-            }
-            
-            // 添加到消息区域并处理完成通知
-            if (window.chatManager) {
-                // 创建消息对象
-                const message = {
-                    text: "我已收到您的PDF文件，请输入问题或直接点击发送按钮分析文件内容。",
-                    sender: 'assistant',
-                    timestamp: new Date().toISOString()
-                };
-                
-                // 添加消息并保存
-                window.chatManager.addMessage(message);
-                window.chatManager.saveConversations();
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            throw new Error('文件处理错误: ' + (error.message || '未知错误'));
-        }
+        // 不再需要处理逻辑，文件已经通过预览展示给用户
+        return true;
     }
     
     // 读取文件为ArrayBuffer
