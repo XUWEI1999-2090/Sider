@@ -286,17 +286,12 @@ class ChatManager {
                         text: prompt || "请分析文件内容，并总结主要信息"
                     }];
                     
-                    // 处理PDF文件
+                    // 处理PDF文件 - 模拟test_multimodal.py中的PDF处理方式
                     if (hasPdfFile && window.currentPdfFile) {
-                        const pdfBase64 = await new Promise((resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.onload = () => {
-                                const base64 = reader.result.split(',')[1];
-                                resolve(base64);
-                            };
-                            reader.onerror = reject;
-                            reader.readAsDataURL(window.currentPdfFile);
-                        });
+                        console.log("处理PDF文件:", window.currentPdfFile.name);
+                        
+                        // 先将整个PDF作为一个对象发送
+                        const pdfBase64 = await this.fileToBase64(window.currentPdfFile);
                         
                         content.push({
                             type: "image_url",
@@ -304,21 +299,20 @@ class ChatManager {
                                 url: `data:application/pdf;base64,${pdfBase64}`
                             }
                         });
+                        
+                        // 注意：这里我们只是将PDF作为一个整体发送
+                        // 在Python中，test_multimodal.py会将PDF拆分为多个页面图像
+                        // 但在网页端无法直接使用PyMuPDF，所以简化处理
+                        console.log("PDF文件处理完成");
                     }
                     
-                    // 处理图片附件
+                    // 处理图片附件 - 类似test_multimodal.py中的单图片处理
                     if (hasAttachments && this.attachments) {
+                        console.log(`处理${this.attachments.length}个附件`);
+                        
                         for (const attachment of this.attachments) {
                             if (attachment && attachment.type && attachment.type.startsWith('image/')) {
-                                const base64 = await new Promise((resolve, reject) => {
-                                    const reader = new FileReader();
-                                    reader.onload = () => {
-                                        const base64 = reader.result.split(',')[1];
-                                        resolve(base64);
-                                    };
-                                    reader.onerror = reject;
-                                    reader.readAsDataURL(attachment);
-                                });
+                                const base64 = await this.fileToBase64(attachment);
                                 
                                 content.push({
                                     type: "image_url",
@@ -326,11 +320,15 @@ class ChatManager {
                                         url: `data:${attachment.type};base64,${base64}`
                                     }
                                 });
+                                console.log(`附件 ${attachment.name || '未命名'} 处理完成`);
                             }
                         }
                     }
                     
-                    // 直接调用 OpenRouter API
+                    console.log(`构建了包含${content.length}个内容项的请求`);
+                    
+                    // 调用OpenRouter API - 与test_multimodal.py中query_qwen函数类似
+                    console.log("调用Qwen API...");
                     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                         method: 'POST',
                         headers: {
@@ -349,11 +347,12 @@ class ChatManager {
                     });
 
                     if (!res.ok) {
-                        throw new Error(`API error: ${res.status}`);
+                        throw new Error(`API error: ${res.status} ${res.statusText}`);
                     }
 
                     const data = await res.json();
-                    response = data.response;  // 直接使用 response 字段
+                    console.log("API响应成功");
+                    response = data.choices ? data.choices[0].message.content : data.response;
                     
                 } catch (error) {
                     console.error('文件处理错误:', error);
@@ -729,6 +728,19 @@ class ChatManager {
             reader.onloadend = () => resolve(reader.result);
             reader.onerror = reject;
             reader.readAsDataURL(blob);
+        });
+    }
+    
+    // 辅助函数：将文件转换为base64（不含data:URL前缀）
+    async fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const base64 = reader.result.split(',')[1];
+                resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
         });
     }
 }
