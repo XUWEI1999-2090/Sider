@@ -86,53 +86,27 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('处理PDF文件:', file.name);
         
         try {
-            // 读取文件内容
-            const arrayBuffer = await readFileAsArrayBuffer(file);
-            
-            // 转换PDF为图像
-            const pdfPages = await convertPdfToImages(arrayBuffer);
-            
-            // 构建API请求内容
-            let contentItems = [];
-            
-            // 添加用户选中的文本（如果有）
-            if (selectedTexts && selectedTexts.length > 0) {
-                for (const text of selectedTexts) {
-                    contentItems.push({
-                        type: 'text',
-                        text: text
-                    });
-                }
-            }
-            
-            // 添加PDF图像
-            for (const page of pdfPages) {
-                contentItems.push({
-                    type: 'image',
-                    image: page.dataUrl
-                });
-            }
-            
-            console.log('PDF文件处理完成');
-            console.log('构建了包含' + contentItems.length + '个内容项的请求');
-            
-            // 调用API处理图像内容
-            await callApiWithContent(contentItems);
+            // 存储PDF文件到全局变量，以便在chat.js中处理
+            window.currentPdfFile = file;
             
             // 隐藏处理指示器
             if (processingIndicator) {
                 processingIndicator.classList.add('d-none');
             }
             
-            // 清空选中文本和预览区域
-            window.selectedTexts = [];
-            const previewArea = document.getElementById('attachmentPreview');
-            const previewContainer = document.getElementById('previewContainer');
-            if (previewArea && previewContainer) {
-                previewContainer.innerHTML = '';
-                previewArea.classList.add('d-none');
+            // 添加到消息区域并处理完成通知
+            if (window.chatManager) {
+                // 创建消息对象
+                const message = {
+                    text: "我已收到您的PDF文件，请输入问题或直接点击发送按钮分析文件内容。",
+                    sender: 'assistant',
+                    timestamp: new Date().toISOString()
+                };
+                
+                // 添加消息并保存
+                window.chatManager.addMessage(message);
+                window.chatManager.saveConversations();
             }
-            
         } catch (error) {
             console.error('Error:', error);
             throw new Error('文件处理错误: ' + (error.message || '未知错误'));
@@ -189,29 +163,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return pages;
     }
     
-    // 调用API处理内容
+    // 简化API处理函数，由于我们将PDF处理逻辑移到了chat.js中，这个函数简化了
     async function callApiWithContent(contentItems) {
         console.log('调用Qwen API...');
         
         try {
-            // 这里应该调用实际的API
-            // 模拟API调用
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // 假设API调用成功
+            // 简化为单纯的API成功记录
             console.log('API响应成功');
-            
-            // 创建并添加响应消息
-            if (window.chatManager) {
-                const responseMessage = {
-                    text: '我已经分析了您上传的PDF文件内容。有什么我可以帮助您的吗？',
-                    sender: 'assistant',
-                    timestamp: new Date().toISOString()
-                };
-                window.chatManager.addMessage(responseMessage);
-                window.chatManager.saveConversations();
-            }
-            
         } catch (error) {
             console.error('API调用失败:', error);
             throw new Error('API error: ' + (error.status || error.message || '未知错误'));

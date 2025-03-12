@@ -216,51 +216,70 @@ class ChatManager {
           this.saveConversations();
       }
   }
-
-  async function fetchApiResponse(content, isMultimodal = false) {
-      const apiEndpoint = isMultimodal ? 
-          "https://openrouter.ai/api/v1/chat/completions" :
-          "https://api.siliconflow.cn/v1/chat/completions";
-
-      const headers = isMultimodal ? {
-          'Authorization': 'Bearer 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',
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://localhost:5001',
-          'X-Title': 'Sider Chat'
-      } : {
-          'Authorization': 'Bearer sk-rebktjhdywuqfmulddzhdygglyrkeengnhlshvejdveeuwdw',
-          'Content-Type': 'application/json'
-      };
-
-      const model = isMultimodal ? 
-          "qwen/qwen2.5-vl-72b-instruct:free" :
-          "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B";
-
-      try {
-          const response = await fetch(apiEndpoint, {
-              method: 'POST',
-              headers,
-              body: JSON.stringify({
-                  model,
-                  messages: [{
-                      role: "user",
-                      content: isMultimodal ? content : content.text || content
-                  }]
-              })
-          });
-
-          if (!response.ok) {
-              throw new Error(`API error: ${response.status}`);
+  
+  updateConversation(options) {
+      const conversation = this.getConversationById(this.currentConversationId);
+      if (conversation) {
+          // 更新会话属性
+          if (options.modelType) {
+              conversation.modelType = options.modelType;
           }
-
-          const data = await response.json();
-          console.log('API Response:', data);
-          return data.choices[0].message.content;
-      } catch (error) {
-          console.error('Error fetching API response:', error);
-          throw error;
+          this.saveConversations();
+          return true;
       }
+      return false;
   }
+
+  // 将fetchApiResponse函数移到类外部作为独立函数
+}
+
+// 独立的API请求函数
+async function fetchApiResponse(content, isMultimodal = false) {
+    const apiEndpoint = isMultimodal ? 
+        "https://openrouter.ai/api/v1/chat/completions" :
+        "https://api.siliconflow.cn/v1/chat/completions";
+
+    const headers = isMultimodal ? {
+        'Authorization': 'Bearer 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',
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://localhost:5001',
+        'X-Title': 'Sider Chat'
+    } : {
+        'Authorization': 'Bearer sk-rebktjhdywuqfmulddzhdygglyrkeengnhlshvejdveeuwdw',
+        'Content-Type': 'application/json'
+    };
+
+    const model = isMultimodal ? 
+        "qwen/qwen2.5-vl-72b-instruct:free" :
+        "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B";
+
+    try {
+        const response = await fetch(apiEndpoint, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                model,
+                messages: [{
+                    role: "user",
+                    content: isMultimodal ? content : content.text || content
+                }]
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('API Response:', data);
+        return data.choices[0].message.content;
+    } catch (error) {
+        console.error('Error fetching API response:', error);
+        throw error;
+    }
+}
+
+class ChatManager {
 
   async handleMessageSubmit() {
       const prompt = this.messageInput.value.trim();
@@ -452,6 +471,18 @@ class ChatManager {
               console.warn('Storage quota exceeded. Try clearing some history.');
           }
       }
+  }
+
+  addMessage(message) {
+      const conversation = this.getConversationById(this.currentConversationId);
+      if (conversation) {
+          conversation.messages.push(message);
+          conversation.updatedAt = new Date().toISOString();
+          this.renderMessage(message);
+          this.scrollToBottom();
+          return true;
+      }
+      return false;
   }
 
   renderMessage(message) {
