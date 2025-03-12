@@ -289,14 +289,16 @@ class ChatManager {
       try {
           let response;
           const isMultimodal = conversation.modelType === 'multimodal';
-
+          
+          // 无论是否有附件，都显示处理中提示
+          this.renderMessage({
+              text: hasPdfFile || hasAttachments ? "正在处理文件，请稍候..." : "正在思考中，请稍候...",
+              sender: 'assistant',
+              isTemporary: true,
+              timestamp: new Date().toISOString()
+          });
+          
           if (hasPdfFile || hasAttachments) {
-              this.renderMessage({
-                  text: "正在处理文件，请稍候...",
-                  sender: 'assistant',
-                  isTemporary: true,
-                  timestamp: new Date().toISOString()
-              });
 
               const content = [{
                   type: "text",
