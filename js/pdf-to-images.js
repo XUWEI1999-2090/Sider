@@ -128,6 +128,7 @@ async function imageToBase64(imageFile) {
 
 // 准备多模态内容
 async function prepareMultimodalContent(files, prompt = "请分析文件内容，并总结主要信息") {
+  console.log("准备处理文件数量:", files.length);
   const content = [{
     type: "text",
     text: prompt

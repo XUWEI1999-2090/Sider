@@ -298,22 +298,35 @@ class ChatManager {
           });
 
           if (hasPdfFile || hasAttachments) {
-              // 收集所有文件
-              const files = [];
-              if (hasPdfFile && window.currentPdfFile) {
-                  files.push(window.currentPdfFile);
-              }
-              if (hasAttachments && this.attachments) {
-                  files.push(...this.attachments);
-              }
+              try {
+                  // 收集所有文件
+                  const files = [];
+                  if (hasPdfFile && window.currentPdfFile) {
+                      console.log("添加PDF文件:", window.currentPdfFile.name);
+                      files.push(window.currentPdfFile);
+                  }
+                  if (hasAttachments && this.attachments) {
+                      console.log("添加附件数量:", this.attachments.length);
+                      files.push(...this.attachments);
+                  }
 
-              // 使用统一的多模态内容处理函数
-              const content = await window.pdfToImages.prepareMultimodalContent(
-                  files,
-                  prompt || "请分析文件内容，并总结主要信息"
-              );
+                  if (files.length === 0) {
+                      throw new Error("没有找到要处理的文件");
+                  }
 
-              response = await fetchApiResponse(content, true);
+                  // 使用统一的多模态内容处理函数
+                  console.log("开始处理文件...");
+                  const content = await window.pdfToImages.prepareMultimodalContent(
+                      files,
+                      prompt || "请分析文件内容，并总结主要信息"
+                  );
+
+                  console.log("文件处理完成，发送API请求");
+                  response = await fetchApiResponse(content, true);
+              } catch (error) {
+                  console.error("文件处理失败:", error);
+                  throw error;
+              }
           } else {
               // 纯文本对话
               response = await fetchApiResponse({ text: prompt }, false);
