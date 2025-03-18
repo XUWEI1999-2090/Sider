@@ -165,17 +165,17 @@
   }
 
   .message.assistant {
-      margin-left: auto;
-      background-color: var(--primary-color);
-      color: white;
-      border-bottom-right-radius: 0.25rem;
-  }
-
-  .message.user {
       margin-right: auto;
       background-color: var(--message-bg-light);
       color: var(--text-light);
       border-bottom-left-radius: 0.25rem;
+  }
+
+  .message.user {
+      margin-left: auto;
+      background-color: var(--primary-color);
+      color: white;
+      border-bottom-right-radius: 0.25rem;
   }
 
   /* Attachment Preview */
@@ -675,7 +675,7 @@
 
 .copy-button {
     position: absolute;
-    top: 4px;
+    bottom: 4px;
     right: 4px;
     padding: 3px;
     background-color: transparent;
