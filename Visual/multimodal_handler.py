@@ -64,9 +64,13 @@ class MultimodalHandler:
         if history is None:
             history = []
         
+        if not self.client.api_key:
+            raise ValueError("API密钥未设置或无效")
+            
         history.append({"role": "user", "content": queries})
         
-        response = self.client.chat.completions.create(
+        try:
+            response = self.client.chat.completions.create(
             model="qwen2.5-vl-7b-instruct",
             messages=history,
             stream=True,
