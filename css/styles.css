@@ -164,14 +164,14 @@
       }
   }
 
-  .message.user {
+  .message.assistant {
       margin-left: auto;
       background-color: var(--primary-color);
       color: white;
       border-bottom-right-radius: 0.25rem;
   }
 
-  .message.assistant {
+  .message.user {
       margin-right: auto;
       background-color: var(--message-bg-light);
       color: var(--text-light);
