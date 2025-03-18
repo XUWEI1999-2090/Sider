@@ -116,8 +116,51 @@ function prepareMultimodalContent(pageImages, prompt = "请分析文件内容，
   return content;
 }
 
+// 处理图片为base64
+async function imageToBase64(imageFile) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(imageFile);
+  });
+}
+
+// 准备多模态内容
+async function prepareMultimodalContent(files, prompt = "请分析文件内容，并总结主要信息") {
+  const content = [{
+    type: "text",
+    text: prompt
+  }];
+
+  for (const file of files) {
+    if (file.type === 'application/pdf') {
+      const images = await convertPdfToImages(file);
+      for (const image of images) {
+        content.push({
+          type: "image_url",
+          image_url: {
+            url: image.dataUrl
+          }
+        });
+      }
+    } else if (file.type.startsWith('image/')) {
+      const base64 = await imageToBase64(file);
+      content.push({
+        type: "image_url",
+        image_url: {
+          url: `data:${file.type};base64,${base64}`
+        }
+      });
+    }
+  }
+
+  return content;
+}
+
 // 导出模块
 window.pdfToImages = {
   convertPdfToImages,
-  prepareMultimodalContent
+  prepareMultimodalContent,
+  imageToBase64
 };

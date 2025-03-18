@@ -1,4 +1,3 @@
-
 class ChatManager {
   constructor() {
       this.conversations = [];
@@ -221,7 +220,7 @@ class ChatManager {
           this.saveConversations();
       }
   }
-  
+
   updateConversation(options) {
       const conversation = this.getConversationById(this.currentConversationId);
       if (conversation) {
@@ -289,7 +288,7 @@ class ChatManager {
       try {
           let response;
           const isMultimodal = conversation.modelType === 'multimodal';
-          
+
           // 无论是否有附件，都显示处理中提示
           this.renderMessage({
               text: hasPdfFile || hasAttachments ? "正在处理文件，请稍候..." : "正在思考中，请稍候...",
@@ -297,60 +296,22 @@ class ChatManager {
               isTemporary: true,
               timestamp: new Date().toISOString()
           });
-          
+
           if (hasPdfFile || hasAttachments) {
-
-              const content = [{
-                  type: "text",
-                  text: prompt || "请分析文件内容，并总结主要信息"
-              }];
-
-              // 处理PDF文件 - 使用PDF转图像方法，类似于test_multimodal.py的处理方式
+              // 收集所有文件
+              const files = [];
               if (hasPdfFile && window.currentPdfFile) {
-                  console.log('正在将PDF转换为图像...');
-                  // 确保PDF处理库已加载
-                  if (typeof window.pdfToImages === 'undefined') {
-                      throw new Error('PDF处理库未加载，请确保pdf-to-images.js已正确引入');
-                  }
-                  
-                  // 将PDF转换为图像
-                  const pageImages = await window.pdfToImages.convertPdfToImages(window.currentPdfFile);
-                  console.log(`成功将PDF转换为${pageImages.length}张图像`);
-                  
-                  // 添加每一页图像到内容数组
-                  for (const page of pageImages) {
-                      content.push({
-                          type: "image_url",
-                          image_url: {
-                              url: page.dataUrl
-                          }
-                      });
-                  }
+                  files.push(window.currentPdfFile);
               }
-
-              // 处理图片附件
               if (hasAttachments && this.attachments) {
-                  for (const attachment of this.attachments) {
-                      if (attachment && attachment.type && attachment.type.startsWith('image/')) {
-                          const base64 = await new Promise((resolve, reject) => {
-                              const reader = new FileReader();
-                              reader.onload = () => {
-                                  const base64 = reader.result.split(',')[1];
-                                  resolve(base64);
-                              };
-                              reader.onerror = reject;
-                              reader.readAsDataURL(attachment);
-                          });
-
-                          content.push({
-                              type: "image_url",
-                              image_url: {
-                                  url: `data:${attachment.type};base64,${base64}`
-                              }
-                          });
-                      }
-                  }
+                  files.push(...this.attachments);
               }
+
+              // 使用统一的多模态内容处理函数
+              const content = await window.pdfToImages.prepareMultimodalContent(
+                  files,
+                  prompt || "请分析文件内容，并总结主要信息"
+              );
 
               response = await fetchApiResponse(content, true);
           } else {
@@ -380,11 +341,11 @@ class ChatManager {
           this.renderMessage(aiMessage);
       } catch (err) {
           console.error('Error:', err);
-          
+
           // 移除临时处理消息
           const tempMessages = this.chatMessages.querySelectorAll('.temporary-message');
           tempMessages.forEach(msg => msg.remove());
-          
+
           // 提供更友好的错误消息
           let errorText = "抱歉，处理您的请求时出错";
           if (err.message) {
@@ -399,7 +360,7 @@ class ChatManager {
                   errorText += ": " + err.message;
               }
           }
-          
+
           const errorMessage = {
               text: errorText,
               sender: 'assistant',
@@ -412,7 +373,7 @@ class ChatManager {
 
       // 清理附件
       this.attachments = []; // 重置为空数组而不是 null
-      
+
       // 清理附件和选中文本，只隐藏而不清空内容
       const preview = document.getElementById('attachmentPreview');
       if (preview) preview.classList.add('d-none');
@@ -427,10 +388,10 @@ class ChatManager {
       if (chatMessagesContainer) {
           chatMessagesContainer.classList.remove('d-none');
       }
-      
+
       // 确保滚动到底部显示最新消息
       this.scrollToBottom();
-      
+
       // 确保消息输入框重新获得焦点
       if (this.messageInput) {
           this.messageInput.focus();
@@ -496,7 +457,7 @@ class ChatManager {
           textDiv.className = 'message-text';
           textDiv.textContent = message.text;
           messageEl.appendChild(textDiv);
-          
+
           // Add copy button
           const copyButton = document.createElement('button');
           copyButton.className = 'copy-button';
@@ -570,7 +531,7 @@ class ChatManager {
       if (typeof feather !== 'undefined') {
           feather.replace();
       }
-      
+
       // 每次添加消息后立即滚动到底部
       this.scrollToBottom();
   }
@@ -706,7 +667,7 @@ class ChatManager {
           // 使用setTimeout确保滚动在DOM更新后执行
           setTimeout(() => {
               this.messageContainer.scrollTop = this.messageContainer.scrollHeight;
-              
+
               // 双重保险：如果第一次滚动不成功，再尝试一次
               setTimeout(() => {
                   this.messageContainer.scrollTop = this.messageContainer.scrollHeight;
@@ -794,7 +755,7 @@ async function fetchApiResponse(content, isMultimodal = false) {
 
     try {
         console.log('调用' + (isMultimodal ? 'Qwen' : 'DeepSeek') + ' API...');
-        
+
         const response = await fetch(apiEndpoint, {
             method: 'POST',
             headers,
@@ -813,12 +774,12 @@ async function fetchApiResponse(content, isMultimodal = false) {
 
         const data = await response.json();
         console.log('API响应成功:', data); // 记录完整响应以便调试
-        
+
         // 更强健的响应格式检查
         if (!data) {
             throw new Error('API返回空响应');
         }
-        
+
         // 处理不同API可能返回的不同格式
         if (data.choices && data.choices[0]) {
             if (data.choices[0].message && data.choices[0].message.content) {
@@ -835,7 +796,7 @@ async function fetchApiResponse(content, isMultimodal = false) {
         } else if (data.message) {
             return typeof data.message === 'string' ? data.message : JSON.stringify(data.message);
         }
-        
+
         // 如果无法找到有效内容，记录错误并返回格式化的响应
         console.error('无法解析API响应:', data);
         throw new Error(`API响应格式错误: ${JSON.stringify(data).substring(0, 100)}...`);
