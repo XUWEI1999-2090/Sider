@@ -104,7 +104,50 @@ async function convertPdfToImages(pdfFile) {
   }
 }
 
+/**
+ * 准备多模态内容
+ * @param {Array<File>} files - 文件数组
+ * @param {string} prompt - 提示文本
+ * @returns {Promise<Array>} 处理后的内容数组
+ */
+async function prepareMultimodalContent(files, prompt) {
+  const content = [{
+    type: "text",
+    text: prompt
+  }];
+
+  for (const file of files) {
+    if (file.type === 'application/pdf') {
+      const images = await convertPdfToImages(file);
+      for (const image of images) {
+        content.push({
+          type: "image_url",
+          image_url: {
+            url: image.base64
+          }
+        });
+      }
+    } else if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      const base64 = await new Promise((resolve) => {
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(file);
+      });
+      
+      content.push({
+        type: "image_url",
+        image_url: {
+          url: base64
+        }
+      });
+    }
+  }
+
+  return content;
+}
+
 // 导出模块
 window.pdfToImages = {
-  convertPdfToImages
+  convertPdfToImages,
+  prepareMultimodalContent
 };
