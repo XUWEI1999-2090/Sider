@@ -70,4 +70,4 @@ class MultimodalHandler:
                 yield content
 
         history.append({"role": "assistant", "content": full_response})
-        return history
+        yield None  # Signal completion and send history through the last yield
