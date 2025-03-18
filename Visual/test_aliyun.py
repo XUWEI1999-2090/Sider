@@ -110,7 +110,7 @@ def chat_with_history(queries, history=None):
     return history
 
 # 多轮对话示例
-parsing_input_instance = ParsingInput(r"gnarly_pdfs\horribleocr.pdf")
+parsing_input_instance = ParsingInput(r"../gnarly_pdfs/horribleocr.pdf")
 # 第一轮对话
 messages = parsing_input_instance.parsing_pdf()
 history = chat_with_history(messages)
