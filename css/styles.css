@@ -675,9 +675,9 @@
 
 .copy-button {
     position: absolute;
-    bottom: 5px;
-    right: 5px;
-    padding: 6px;
+    top: 4px;
+    right: 4px;
+    padding: 3px;
     background-color: transparent;
     border: none;
     cursor: pointer;
@@ -686,8 +686,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
+    border-radius: 3px;
     color: inherit;
+    transform: scale(0.8);
 }
 
 .message:hover .copy-button {
