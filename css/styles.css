@@ -150,6 +150,7 @@
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       animation: messageAppear 0.3s ease forwards;
       display: block;
+      position: relative;
   }
 
   @keyframes messageAppear {
@@ -670,4 +671,38 @@
     33% { content: ".."; }
     66% { content: "..."; }
     100% { content: ""; }
+}
+
+.copy-button {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    padding: 4px 8px;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: inherit;
+}
+
+.message:hover .copy-button {
+    opacity: 1;
+}
+
+.copy-button:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+
+.message.user .copy-button {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.message.user .copy-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
 }

@@ -496,6 +496,26 @@ class ChatManager {
           textDiv.className = 'message-text';
           textDiv.textContent = message.text;
           messageEl.appendChild(textDiv);
+          
+          // Add copy button
+          const copyButton = document.createElement('button');
+          copyButton.className = 'copy-button';
+          copyButton.innerHTML = '<i data-feather="copy"></i>复制';
+          copyButton.onclick = async (e) => {
+              e.stopPropagation();
+              try {
+                  await navigator.clipboard.writeText(message.text);
+                  copyButton.innerHTML = '<i data-feather="check"></i>已复制';
+                  feather.replace();
+                  setTimeout(() => {
+                      copyButton.innerHTML = '<i data-feather="copy"></i>复制';
+                      feather.replace();
+                  }, 2000);
+              } catch (err) {
+                  console.error('Failed to copy:', err);
+              }
+          };
+          messageEl.appendChild(copyButton);
       }
 
       if (message.attachments && message.attachments.length > 0) {
