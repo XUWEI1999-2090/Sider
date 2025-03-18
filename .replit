@@ -9,7 +9,7 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "node index.js"]
 
 [workflows]
-runButton = "Project Server"
+runButton = "Extension Server"
 
 [[workflows.workflow]]
 name = "运行所有服务"
@@ -53,6 +53,15 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd Visual && python api_server.py"
+
+[[workflows.workflow]]
+name = "Extension Server"
+author = 40616190
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node index.js"
 
 [[ports]]
 localPort = 3000
