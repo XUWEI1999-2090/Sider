@@ -6,8 +6,11 @@ import fitz  # PyMuPDF
 
 class MultimodalHandler:
     def __init__(self):
+        api_key = os.getenv("DASHSCOPE_API_KEY")
+        if not api_key:
+            print("警告: DASHSCOPE_API_KEY 未设置")
         self.client = OpenAI(
-            api_key=os.getenv("DASHSCOPE_API_KEY"),
+            api_key=api_key,
             base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
         )
 
