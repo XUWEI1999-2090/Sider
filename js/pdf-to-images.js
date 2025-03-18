@@ -4,12 +4,35 @@
  * 使用 PDF.js 库实现类似 PyMuPDF 的功能
  */
 
-// PDF.js 库路径
-const pdfJsLib = window.pdfjsLib;
+// PDF.js 库路径和配置
+if (typeof window.pdfjsLib === 'undefined') {
+  console.log('正在加载 PDF.js...');
+  const script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+  document.head.appendChild(script);
+}
 
-// 确保 PDF.js 加载
-if (!pdfJsLib) {
-  console.error('PDF.js 库未加载！');
+// 等待 PDF.js 加载完成
+function waitForPdfJs() {
+  return new Promise((resolve, reject) => {
+    if (window.pdfjsLib) {
+      resolve(window.pdfjsLib);
+      return;
+    }
+    
+    const checkInterval = setInterval(() => {
+      if (window.pdfjsLib) {
+        clearInterval(checkInterval);
+        resolve(window.pdfjsLib);
+      }
+    }, 100);
+
+    // 10秒后超时
+    setTimeout(() => {
+      clearInterval(checkInterval);
+      reject(new Error('PDF.js 加载超时'));
+    }, 10000);
+  });
 }
 
 /**
@@ -20,6 +43,9 @@ if (!pdfJsLib) {
 async function convertPdfToImages(pdfFile) {
   try {
     console.log('开始处理 PDF 文件...');
+    
+    // 等待 PDF.js 加载
+    const pdfJsLib = await waitForPdfJs();
     
     // 读取 PDF 文件为 ArrayBuffer
     const arrayBuffer = await pdfFile.arrayBuffer();
