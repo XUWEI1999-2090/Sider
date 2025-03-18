@@ -305,9 +305,20 @@ class ChatManager {
                       console.log("添加PDF文件:", window.currentPdfFile.name);
                       files.push(window.currentPdfFile);
                   }
-                  if (hasAttachments && this.attachments) {
-                      console.log("添加附件数量:", this.attachments.length);
-                      files.push(...this.attachments);
+                  if (hasAttachments) {
+                      console.log("正在处理附件...");
+                      // 确保 this.attachments 是一个数组
+                      const attachmentsArray = Array.isArray(this.attachments) ? this.attachments : [];
+                      for (const attachment of attachmentsArray) {
+                          if (attachment.url) {
+                              // 处理base64图片
+                              const response = await fetch(attachment.url);
+                              const blob = await response.blob();
+                              const file = new File([blob], attachment.name, { type: attachment.type });
+                              files.push(file);
+                          }
+                      }
+                      console.log("添加附件数量:", files.length);
                   }
 
                   if (files.length === 0) {
@@ -320,6 +331,12 @@ class ChatManager {
                       files,
                       prompt || "请分析文件内容，并总结主要信息"
                   );
+
+                  // 更新模型类型为多模态
+                  const conversation = this.getConversationById(this.currentConversationId);
+                  if (conversation) {
+                      conversation.modelType = 'multimodal';
+                  }
 
                   console.log("文件处理完成，发送API请求");
                   response = await fetchApiResponse(content, true);
