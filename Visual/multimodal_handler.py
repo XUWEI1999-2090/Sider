@@ -7,8 +7,8 @@ from openai import OpenAI
 class MultimodalHandler:
     def __init__(self):
         self.client = OpenAI(
-            api_key=os.getenv("DASHSCOPE_API_KEY"),
-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            api_key="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",
+            base_url="https://openrouter.ai/api/v1",
         )
         
     def encode_image(self, image_path):
@@ -56,7 +56,7 @@ class MultimodalHandler:
         history.append({"role": "user", "content": messages})
         
         response = self.client.chat.completions.create(
-            model="qwen2.5-vl-7b-instruct",
+            model="qwen/qwen2.5-vl-72b-instruct:free",
             messages=history,
             stream=True,
             stream_options={"include_usage": True}
