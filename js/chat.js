@@ -500,15 +500,15 @@ class ChatManager {
           // Add copy button
           const copyButton = document.createElement('button');
           copyButton.className = 'copy-button';
-          copyButton.innerHTML = '<i data-feather="copy"></i>复制';
+          copyButton.innerHTML = '<i data-feather="copy"></i>';
           copyButton.onclick = async (e) => {
               e.stopPropagation();
               try {
                   await navigator.clipboard.writeText(message.text);
-                  copyButton.innerHTML = '<i data-feather="check"></i>已复制';
+                  copyButton.innerHTML = '<i data-feather="check"></i>';
                   feather.replace();
                   setTimeout(() => {
-                      copyButton.innerHTML = '<i data-feather="copy"></i>复制';
+                      copyButton.innerHTML = '<i data-feather="copy"></i>';
                       feather.replace();
                   }, 2000);
               } catch (err) {
