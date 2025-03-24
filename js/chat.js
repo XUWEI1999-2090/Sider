@@ -23,6 +23,16 @@ class ChatManager {
 
     async handleMessage(prompt, hasPdfFile, hasAttachments) {
         try {
+            const cleanupAttachments = () => {
+                this.attachments = [];
+                window.currentPdfFile = null;
+                const preview = document.getElementById('attachmentPreview');
+                if (preview) {
+                    preview.innerHTML = '';
+                    preview.classList.add('d-none');
+                }
+            };
+
             let response;
             const conversation = this.getConversationById(this.currentConversationId);
             const isMultimodal = conversation.modelType === "multimodal";
@@ -97,6 +107,9 @@ class ChatManager {
                 throw new Error("API返回了空响应");
             }
 
+            // Clean up attachments after successful processing
+            cleanupAttachments();
+
             const tempMessages = this.chatMessages.querySelectorAll(".temporary-message");
             tempMessages.forEach((msg) => msg.remove());
 
@@ -110,15 +123,6 @@ class ChatManager {
             conversation.updatedAt = new Date().toISOString();
             this.saveConversations();
             this.renderMessage(aiMessage);
-            
-            // Clear attachments after successful message
-            this.attachments = [];
-            window.currentPdfFile = null;
-            const preview = document.getElementById('attachmentPreview');
-            if (preview) {
-                preview.innerHTML = '';
-                preview.classList.add('d-none');
-            }
 
         } catch (err) {
             console.error("Error:", err);
