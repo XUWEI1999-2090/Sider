@@ -23,100 +23,80 @@ class ChatManager {
 
     async handleMessage(prompt, hasPdfFile, hasAttachments) {
         try {
-            const cleanupAttachments = () => {
-                this.attachments = [];
-                window.currentPdfFile = null;
-                const preview = document.getElementById('attachmentPreview');
-                if (preview) {
-                    preview.innerHTML = '';
-                    preview.classList.add('d-none');
-                }
+            // 显示用户消息
+            const userMessage = {
+                text: prompt,
+                attachments: hasAttachments ? this.attachments : [],
+                sender: "user",
+                timestamp: new Date().toISOString()
             };
+            this.addMessage(userMessage);
 
-            let response;
-            const conversation = this.getConversationById(this.currentConversationId);
-            const isMultimodal = conversation.modelType === "multimodal";
-
+            // 显示临时消息
             this.renderMessage({
-                text: hasPdfFile || hasAttachments
-                    ? "正在处理文件，请稍候..."
-                    : "正在思考中，请稍候...",
+                text: "正在思考中，请稍候...",
                 sender: "assistant",
                 isTemporary: true,
-                timestamp: new Date().toISOString(),
+                timestamp: new Date().toISOString()
             });
 
-            if (hasPdfFile || hasAttachments) {
-                try {
-                    const messageBuilder = new BuildMessages();
-                    const messages = [];
-
-                    if (prompt) {
-                        messages.push({
-                            role: "user",
-                            content: prompt
-                        });
-                    }
-
-                    if (hasPdfFile && window.currentPdfFile) {
-                        console.log("处理PDF文件:", window.currentPdfFile.name);
-                        await messageBuilder.parsingPdf(window.currentPdfFile);
-                    }
-
-                    if (hasAttachments) {
-                        console.log("正在处理附件...");
-                        const attachmentsArray = Array.isArray(this.attachments)
-                            ? this.attachments
-                            : [];
-
-                        for (const attachment of attachmentsArray) {
-                            if (attachment.url) {
-                                console.log("处理附件:", attachment.name);
-                                await messageBuilder.parsingImage(attachment.url);
-                            }
-                        }
-                    }
-
-                    const builtMessages = messageBuilder.messages;
-
-                    if (builtMessages.length === 0) {
-                        throw new Error("没有找到要处理的内容");
-                    }
-
-                    if (conversation) {
-                        conversation.modelType = "multimodal";
-                    }
-
-                    console.log("文件处理完成，发送API请求");
-                    response = await chatWithMemory(builtMessages, true);
-
-                } catch (error) {
-                    console.error("文件处理失败:", error);
-                    throw error;
-                }
-            } else {
-                const messages = [{
+            // 准备消息内容
+            const messageBuilder = new BuildMessages();
+            if (prompt) {
+                messageBuilder.messages.push({
                     role: "user",
                     content: prompt
-                }];
-
-                response = await chatWithMemory(messages, false);
+                });
             }
+
+            // 处理附件
+            if (hasPdfFile && window.currentPdfFile) {
+                await messageBuilder.parsingPdf(window.currentPdfFile);
+            }
+
+            if (hasAttachments && Array.isArray(this.attachments)) {
+                for (const attachment of this.attachments) {
+                    if (attachment.url) {
+                        await messageBuilder.parsingImage(attachment.url);
+                    }
+                }
+            }
+
+            // 获取会话并设置类型
+            const conversation = this.getConversationById(this.currentConversationId);
+            const isMultimodal = hasPdfFile || hasAttachments;
+            if (conversation && isMultimodal) {
+                conversation.modelType = "multimodal";
+            }
+
+            // 发送API请求
+            const response = await chatWithMemory(
+                messageBuilder.messages,
+                isMultimodal
+            );
 
             if (!response) {
                 throw new Error("API返回了空响应");
             }
 
-            // Clean up attachments after successful processing
-            cleanupAttachments();
+            // 清理临时消息和附件
+            this.chatMessages.querySelectorAll(".temporary-message")
+                .forEach(msg => msg.remove());
 
-            const tempMessages = this.chatMessages.querySelectorAll(".temporary-message");
-            tempMessages.forEach((msg) => msg.remove());
+            // 清理附件
+            this.attachments = [];
+            window.currentPdfFile = null;
+            const preview = document.getElementById('attachmentPreview');
+            if (preview) {
+                preview.innerHTML = '';
+                preview.classList.add('d-none');
+            }
 
+            // 添加AI回复
             const aiMessage = {
                 text: response,
                 sender: "assistant",
-                timestamp: new Date().toISOString(),
+                timestamp: new Date().toISOString()
             };
 
             conversation.messages.push(aiMessage);
@@ -126,14 +106,13 @@ class ChatManager {
 
         } catch (err) {
             console.error("Error:", err);
-
-            const tempMessages = this.chatMessages.querySelectorAll(".temporary-message");
-            tempMessages.forEach((msg) => msg.remove());
+            this.chatMessages.querySelectorAll(".temporary-message")
+                .forEach(msg => msg.remove());
 
             this.renderMessage({
                 text: `处理失败: ${err.message}`,
                 sender: "system",
-                timestamp: new Date().toISOString(),
+                timestamp: new Date().toISOString()
             });
         }
     }
