@@ -23,6 +23,30 @@ class ChatManager {
 
     async handleMessage(prompt, hasPdfFile, hasAttachments) {
         try {
+            // 准备消息内容
+            const messageBuilder = new BuildMessages();
+            
+            // 处理文本内容
+            if (prompt) {
+                messageBuilder.messages.push({
+                    role: "user", 
+                    content: prompt
+                });
+            }
+            
+            // 预处理附件
+            if (hasPdfFile && window.currentPdfFile) {
+                await messageBuilder.parsingPdf(window.currentPdfFile);
+            }
+            
+            if (hasAttachments && Array.isArray(this.attachments)) {
+                for (const attachment of this.attachments) {
+                    if (attachment.url) {
+                        await messageBuilder.parsingImage(attachment.url);
+                    }
+                }
+            }
+
             // 显示用户消息
             const userMessage = {
                 text: prompt || '',
@@ -31,33 +55,24 @@ class ChatManager {
                 timestamp: new Date().toISOString()
             };
             
-            // 先显示用户消息
-            this.renderMessage(userMessage);
-            this.chatMessages.appendChild(document.createElement('br'));
-            
             // 添加到会话并保存
             const conversation = this.getConversationById(this.currentConversationId);
             if (conversation) {
                 conversation.messages.push(userMessage);
                 this.saveConversations();
             }
+            
+            // 渲染用户消息
+            this.renderMessage(userMessage);
+            this.chatMessages.appendChild(document.createElement('br'));
 
             // 显示临时消息
             this.renderMessage({
-                text: "正在思考中，请稍候...",
+                text: hasPdfFile || hasAttachments ? "正在处理附件，请稍候..." : "正在思考中，请稍候...",
                 sender: "assistant",
                 isTemporary: true,
                 timestamp: new Date().toISOString()
             });
-
-            // 准备消息内容
-            const messageBuilder = new BuildMessages();
-            if (prompt) {
-                messageBuilder.messages.push({
-                    role: "user",
-                    content: prompt
-                });
-            }
 
             // 处理附件
             if (hasPdfFile && window.currentPdfFile) {
