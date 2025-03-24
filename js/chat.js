@@ -26,6 +26,14 @@ class ChatManager {
             // 准备消息内容
             const messageBuilder = new BuildMessages();
             
+            // 创建用户消息对象
+            const userMessage = {
+                text: prompt || '',
+                attachments: [],
+                sender: "user",
+                timestamp: new Date().toISOString()
+            };
+            
             // 处理文本内容
             if (prompt) {
                 messageBuilder.messages.push({
@@ -34,26 +42,24 @@ class ChatManager {
                 });
             }
             
-            // 预处理附件
+            // 预处理附件并添加到用户消息
             if (hasPdfFile && window.currentPdfFile) {
+                userMessage.attachments.push({
+                    name: window.currentPdfFile.name,
+                    type: 'pdf',
+                    size: window.currentPdfFile.size
+                });
                 await messageBuilder.parsingPdf(window.currentPdfFile);
             }
             
             if (hasAttachments && Array.isArray(this.attachments)) {
                 for (const attachment of this.attachments) {
                     if (attachment.url) {
+                        userMessage.attachments.push(attachment);
                         await messageBuilder.parsingImage(attachment.url);
                     }
                 }
             }
-
-            // 显示用户消息
-            const userMessage = {
-                text: prompt || '',
-                attachments: hasAttachments ? this.attachments : [],
-                sender: "user",
-                timestamp: new Date().toISOString()
-            };
             
             // 添加到会话并保存
             const conversation = this.getConversationById(this.currentConversationId);
