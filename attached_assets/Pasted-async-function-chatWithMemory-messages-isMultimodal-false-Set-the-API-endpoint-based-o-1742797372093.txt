@@ -1,0 +1,393 @@
+async function chatWithMemory(messages, isMultimodal = false) {
+    // Set the API endpoint based on the model type
+    const apiEndpoint = isMultimodal
+        ? "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+        : "https://api.siliconflow.cn/v1/chat/completions";
+
+    const apiKey = isMultimodal
+    ? process.env.DASHSCOPE_API_KEY 
+    : process.env.SILICON_API_KEY; 
+
+    const headers = {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+    };
+
+    // Set the model based on the type
+    const model = isMultimodal
+        ? "qwen2.5-vl-7b-instruct"
+        : "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B";
+
+    try {
+        console.log("Calling " + (isMultimodal ? "Qwen" : "DeepSeek") + " API...");
+
+        // Create the request config
+        const requestBody = {
+            model: model,
+            messages: messages,
+            stream: true,
+            max_tokens: 4096,
+            temperature: 0.7,
+            top_p: 0.7
+        };
+
+        // Make the API request with fetch
+        const response = await fetch(apiEndpoint, {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+
+        // Handle streaming response
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let content = "";
+        let reasoningContent = "";
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            // Decode the chunk
+            const chunkText = decoder.decode(value, { stream: true });
+            
+            // Process the chunk as JSON
+            const lines = chunkText.split('\n').filter(line => line.trim() !== '');
+            
+            for (const line of lines) {
+                // Skip the "data: " prefix if present
+                const jsonStr = line.startsWith('data: ') ? line.slice(6) : line;
+                
+                if (jsonStr === "[DONE]") continue;
+                
+                try {
+                    const chunk = JSON.parse(jsonStr);
+                    
+                    if (chunk.choices && chunk.choices.length > 0) {
+                        // Handle content
+                        if (chunk.choices[0].delta && chunk.choices[0].delta.content) {
+                            const output = chunk.choices[0].delta.content;
+                            process.stdout.write(output); // Print without newline
+                            content += output;
+                        }
+                        
+                        // Handle reasoning content if available
+                        if (chunk.choices[0].delta && chunk.choices[0].delta.reasoning_content) {
+                            const output = chunk.choices[0].delta.reasoning_content;
+                            process.stdout.write(output); // Print without newline
+                            reasoningContent += output;
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error parsing chunk:", error);
+                }
+            }
+        }
+
+        // Add the assistant response to the messages array
+        messages.push({ "role": "assistant", "content": content });
+        
+        return messages;
+    } catch (error) {
+        console.error("Error fetching API response:", error);
+        throw error;
+    }
+}
+
+class BuildMessages {
+    constructor(outputDir = "png_images", messages = null) {
+        this.outputDir = outputDir;
+        this.messages = messages || [];
+    }
+
+    /**
+     * Parse an image and add it to the messages
+     * @param {string} imagePath - Path to the image file
+     * @returns {Array} The updated messages array
+     */
+    async parsingImage(imagePath) {
+        try {
+            // Check if file exists and read it
+            const response = await fetch(imagePath);
+            if (!response.ok) {
+                console.error(`File not found: ${imagePath}`);
+                return this.messages;
+            }
+
+            // Convert to base64
+            const blob = await response.blob();
+            const base64Img = await this.blobToBase64(blob);
+            
+            // Add to messages
+            this.messages.push({
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": `data:image/jpeg;base64,${base64Img}`
+                        }
+                    }
+                ]
+            });
+            
+            return this.messages;
+        } catch (error) {
+            console.error(`Error processing image ${imagePath}:`, error);
+            return this.messages;
+        }
+    }
+
+    /**
+     * Convert a Blob to base64 string
+     * @param {Blob} blob - The blob to convert
+     * @returns {Promise<string>} Base64 string
+     */
+    blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
+                const base64String = reader.result.split(',')[1];
+                resolve(base64String);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    /**
+     * Parse a PDF file into images and add them to messages
+     * @param {File} pdfFile - The PDF file object
+     * @returns {Promise<Array>} The updated messages array
+     */
+    async parsingPdf(pdfFile) {
+        try {
+            // Ensure the output directory exists
+            await this.ensureDirectoryExists(this.outputDir);
+            
+            // Get PDF filename without extension
+            const pdfFilename = pdfFile.name.split('.').slice(0, -1).join('.');
+            
+            // Load the PDF using PDF.js
+            const pdfData = await pdfFile.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+            
+            // Process each page
+            for (let pageNum = 0; pageNum < pdf.numPages; pageNum++) {
+                try {
+                    // Get the page
+                    const page = await pdf.getPage(pageNum + 1);
+                    
+                    // Set scale for better quality
+                    const scale = 2.0;
+                    const viewport = page.getViewport({ scale });
+                    
+                    // Create a canvas to render the page
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    
+                    // Render the page to canvas
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+                    
+                    await page.render(renderContext).promise;
+                    
+                    // Convert canvas to image
+                    const outputPath = `${this.outputDir}/${pdfFilename}_page${pageNum + 1}.png`;
+                    const imageBlob = await new Promise(resolve => {
+                        canvas.toBlob(resolve, 'image/png');
+                    });
+                    
+                    // Save the image (in browser context, this would be a download or storage)
+                    // For this implementation, we'll simulate by creating an object URL
+                    const imageUrl = URL.createObjectURL(imageBlob);
+                    
+                    console.log(`✅ Saved page ${pageNum + 1}: ${outputPath}`);
+                    
+                    // Parse the image and add to messages
+                    await this.parsingImage(imageUrl);
+                    console.log(`✅ Added page ${pageNum + 1} to message build list`);
+                    
+                    // Clean up the object URL
+                    URL.revokeObjectURL(imageUrl);
+                    
+                } catch (error) {
+                    console.error(`❌ Error processing page ${pageNum + 1}: ${error}`);
+                }
+            }
+            
+            return this.messages;
+        } catch (error) {
+            console.error("Error parsing PDF:", error);
+            return this.messages;
+        }
+    }
+    
+    /**
+     * Ensure a directory exists (browser-compatible version)
+     * @param {string} dirPath - Directory path
+     */
+    async ensureDirectoryExists(dirPath) {
+        // In browser context, we can't directly create directories
+        // This is a placeholder for compatibility with the Python code
+        console.log(`Ensuring directory exists: ${dirPath}`);
+        // In a real implementation, you might use IndexedDB or another storage API
+        return true;
+    }
+}
+// Import PDF.js in your HTML
+// <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.min.js"></script>
+
+async function handleMessage(prompt, hasPdfFile, hasAttachments) {
+    try {
+        let response;
+        const conversation = this.getConversationById(this.currentConversationId);
+        const isMultimodal = conversation.modelType === "multimodal";
+        
+        // Show processing message
+        this.renderMessage({
+            text: hasPdfFile || hasAttachments
+                ? "正在处理文件，请稍候..."
+                : "正在思考中，请稍候...",
+            sender: "assistant",
+            isTemporary: true,
+            timestamp: new Date().toISOString(),
+        });
+        
+        if (hasPdfFile || hasAttachments) {
+            try {
+                // Initialize BuildMessages class
+                const messageBuilder = new BuildMessages();
+                const messages = [];
+                
+                // Add text prompt if provided
+                if (prompt) {
+                    messages.push({
+                        role: "user",
+                        content: prompt
+                    });
+                }
+                
+                // Process PDF files
+                if (hasPdfFile && window.currentPdfFile) {
+                    console.log("处理PDF文件:", window.currentPdfFile.name);
+                    await messageBuilder.parsingPdf(window.currentPdfFile);
+                }
+                
+                // Process other attachments
+                if (hasAttachments) {
+                    console.log("正在处理附件...");
+                    // Ensure this.attachments is an array
+                    const attachmentsArray = Array.isArray(this.attachments)
+                        ? this.attachments
+                        : [];
+                        
+                    for (const attachment of attachmentsArray) {
+                        if (attachment.url) {
+                            console.log("处理附件:", attachment.name);
+                            await messageBuilder.parsingImage(attachment.url);
+                        }
+                    }
+                }
+                
+                // Get the built messages with images/PDF content
+                const builtMessages = messageBuilder.messages;
+                
+                if (builtMessages.length === 0) {
+                    throw new Error("没有找到要处理的内容");
+                }
+                
+                // Update model type to multimodal
+                if (conversation) {
+                    conversation.modelType = "multimodal";
+                }
+                
+                console.log("文件处理完成，发送API请求");
+                response = await chatWithMemory(builtMessages, true);
+                
+            } catch (error) {
+                console.error("文件处理失败:", error);
+                throw error;
+            }
+        } else {
+            // For text-only conversations
+            const messages = [{
+                role: "user",
+                content: prompt
+            }];
+            
+            response = await chatWithMemory(messages, false);
+        }
+        
+        // Safety check: ensure we have a valid response
+        if (!response) {
+            throw new Error("API返回了空响应");
+        }
+        
+        // Remove temporary processing message
+        const tempMessages = this.chatMessages.querySelectorAll(".temporary-message");
+        tempMessages.forEach((msg) => msg.remove());
+        
+        const aiMessage = {
+            text: response,
+            sender: "assistant",
+            timestamp: new Date().toISOString(),
+        };
+        
+        // Update conversation with AI response
+        conversation.messages.push(aiMessage);
+        conversation.updatedAt = new Date().toISOString();
+        this.saveConversations();
+        this.renderMessage(aiMessage);
+        
+    } catch (err) {
+        console.error("Error:", err);
+        
+        // Remove temporary processing message
+        const tempMessages = this.chatMessages.querySelectorAll(".temporary-message");
+        tempMessages.forEach((msg) => msg.remove());
+        
+        // Show error message to user
+        this.renderMessage({
+            text: `处理失败: ${err.message}`,
+            sender: "system",
+            timestamp: new Date().toISOString(),
+        });
+    }
+}
+
+async function handleMessageSubmit(event) {
+    event.preventDefault(); // 阻止默认提交行为
+
+    const inputElement = document.getElementById("chat-input"); // 获取输入框
+    const prompt = inputElement.value.trim(); // 获取并去除空格
+    const hasPdfFile = Boolean(window.currentPdfFile); // 检查是否有 PDF
+    const hasAttachments = this.attachments && this.attachments.length > 0; // 检查是否有附件
+
+    if (!prompt && !hasPdfFile && !hasAttachments) {
+        console.warn("输入为空，且没有上传文件");
+        return;
+    }
+
+    // 清空输入框
+    inputElement.value = "";
+
+    // 将用户消息渲染到聊天窗口
+    this.renderMessage({
+        text: prompt,
+        sender: "user",
+        timestamp: new Date().toISOString(),
+    });
+
+    // 调用 handleMessage 处理消息
+    await handleMessage(prompt, hasPdfFile, hasAttachments);
+}
