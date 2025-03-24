@@ -110,6 +110,15 @@ class ChatManager {
             conversation.updatedAt = new Date().toISOString();
             this.saveConversations();
             this.renderMessage(aiMessage);
+            
+            // Clear attachments after successful message
+            this.attachments = [];
+            window.currentPdfFile = null;
+            const preview = document.getElementById('attachmentPreview');
+            if (preview) {
+                preview.innerHTML = '';
+                preview.classList.add('d-none');
+            }
 
         } catch (err) {
             console.error("Error:", err);
