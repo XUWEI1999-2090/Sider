@@ -188,6 +188,59 @@ class ChatManager {
     }
 
     setupEventListeners() {
+        // 设置PDF上传按钮处理
+        const uploadPdfBtn = document.getElementById('uploadPdfBtn');
+        if (uploadPdfBtn) {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.pdf';
+            fileInput.style.display = 'none';
+            document.body.appendChild(fileInput);
+            
+            uploadPdfBtn.addEventListener('click', () => {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file && file.type === 'application/pdf') {
+                    window.currentPdfFile = file;
+                    // 显示预览
+                    const preview = document.getElementById('attachmentPreview');
+                    if (preview) {
+                        preview.classList.remove('d-none');
+                        const container = document.getElementById('previewContainer');
+                        if (container) {
+                            const previewContent = document.createElement('div');
+                            previewContent.className = 'preview-content file-preview';
+                            previewContent.innerHTML = `
+                                <i data-feather="file-text"></i>
+                                <span class="ms-2">${file.name}</span>
+                                <span class="ms-2 text-muted">(${this.formatFileSize(file.size)})</span>
+                                <button class="btn btn-close"><i data-feather="x"></i></button>
+                            `;
+                            
+                            container.appendChild(previewContent);
+                            if (typeof feather !== 'undefined') {
+                                feather.replace();
+                            }
+                            
+                            const removeBtn = previewContent.querySelector('.btn-close');
+                            if (removeBtn) {
+                                removeBtn.onclick = () => {
+                                    previewContent.remove();
+                                    window.currentPdfFile = null;
+                                    if (!container.querySelector('.preview-content')) {
+                                        preview.classList.add('d-none');
+                                    }
+                                };
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         this.messageForm.addEventListener('submit', (e) => {
             e.preventDefault();
             e.stopPropagation();
