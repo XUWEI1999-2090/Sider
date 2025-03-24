@@ -8,11 +8,9 @@
     <link href="lib/feather.css" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
     <!-- PDF.js 库 -->
-    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="lib/pdf.js/pdf.min.js"></script>
     <script>
-        // 设置PDF.js worker
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.js/pdf.worker.min.js';
     </script>
 </head>
 <body class="sidebar">
@@ -124,7 +122,7 @@
 
     <script src="lib/bootstrap.bundle.min.js"></script>
     <script src="lib/feather.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="lib/marked.min.js"></script>
     <script src="js/screenshot.js"></script>
     <script src="js/manual-screenshot.js"></script>
     <script src="js/utils/message-builder.js"></script>

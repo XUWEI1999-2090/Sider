@@ -25,7 +25,7 @@ class ChatManager {
         try {
             // 准备消息内容
             const messageBuilder = new BuildMessages();
-            
+
             // 创建用户消息对象
             const userMessage = {
                 text: prompt || '',
@@ -33,7 +33,7 @@ class ChatManager {
                 sender: "user",
                 timestamp: new Date().toISOString()
             };
-            
+
             // 处理文本内容
             if (prompt) {
                 messageBuilder.messages.push({
@@ -41,7 +41,7 @@ class ChatManager {
                     content: prompt
                 });
             }
-            
+
             // 预处理附件并添加到用户消息
             if (hasPdfFile && window.currentPdfFile) {
                 userMessage.attachments.push({
@@ -51,7 +51,7 @@ class ChatManager {
                 });
                 await messageBuilder.parsingPdf(window.currentPdfFile);
             }
-            
+
             if (hasAttachments && Array.isArray(this.attachments)) {
                 for (const attachment of this.attachments) {
                     if (attachment.url) {
@@ -60,14 +60,14 @@ class ChatManager {
                     }
                 }
             }
-            
+
             // 添加到会话并保存
             const conversation = this.getConversationById(this.currentConversationId);
             if (conversation) {
                 conversation.messages.push(userMessage);
                 this.saveConversations();
             }
-            
+
             // 渲染用户消息
             this.renderMessage(userMessage);
             this.chatMessages.appendChild(document.createElement('br'));
@@ -196,11 +196,11 @@ class ChatManager {
             fileInput.accept = '.pdf';
             fileInput.style.display = 'none';
             document.body.appendChild(fileInput);
-            
+
             uploadPdfBtn.addEventListener('click', () => {
                 fileInput.click();
             });
-            
+
             fileInput.addEventListener('change', (event) => {
                 const file = event.target.files[0];
                 if (file && file.type === 'application/pdf') {
@@ -219,12 +219,12 @@ class ChatManager {
                                 <span class="ms-2 text-muted">(${this.formatFileSize(file.size)})</span>
                                 <button class="btn btn-close"><i data-feather="x"></i></button>
                             `;
-                            
+
                             container.appendChild(previewContent);
                             if (typeof feather !== 'undefined') {
                                 feather.replace();
                             }
-                            
+
                             const removeBtn = previewContent.querySelector('.btn-close');
                             if (removeBtn) {
                                 removeBtn.onclick = () => {
@@ -407,7 +407,7 @@ class ChatManager {
             // 先添加到会话消息列表
             conversation.messages.push(message);
             conversation.updatedAt = new Date().toISOString();
-            
+
             // 确保消息有文本内容
             if (message.text || message.text === '') {
                 this.renderMessage(message);
