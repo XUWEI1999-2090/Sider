@@ -707,3 +707,45 @@
 .message.user .copy-button:hover {
     background-color: rgba(255, 255, 255, 0.2);
 }
+/* Markdown Styles */
+.message-text {
+  line-height: 1.5;
+}
+
+.message-text code {
+  background: #f0f0f0;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.message-text pre {
+  background: #f5f5f5;
+  padding: 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.message-text blockquote {
+  border-left: 4px solid #ddd;
+  margin: 0;
+  padding-left: 1rem;
+  color: #666;
+}
+
+.message-text table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.message-text th,
+.message-text td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.message-text th {
+  background-color: #f5f5f5;
+}

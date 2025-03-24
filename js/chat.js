@@ -349,7 +349,10 @@ class ChatManager {
         if (message.text) {
             const textDiv = document.createElement('div');
             textDiv.className = 'message-text';
-            textDiv.textContent = message.text;
+            textDiv.innerHTML = marked.parse(message.text, {
+                breaks: true,
+                gfm: true
+            });
             messageEl.appendChild(textDiv);
 
             const copyButton = document.createElement('button');
