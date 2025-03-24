@@ -5,9 +5,10 @@ async function chatWithMemory(messages, isMultimodal = false) {
         ? "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
         : "https://api.siliconflow.cn/v1/chat/completions";
 
+    // API keys should be managed securely in a production environment
     const apiKey = isMultimodal
-        ? process.env.DASHSCOPE_API_KEY 
-        : process.env.SILICON_API_KEY;
+        ? "sk-63ac7b00588d452eb1ae51af74f3a8dc"
+        : "sk-rebktjhdywuqfmulddzhdygglyrkeengnhlshvejdveeuwdw";
 
     const headers = {
         Authorization: `Bearer ${apiKey}`,
@@ -63,13 +64,13 @@ async function chatWithMemory(messages, isMultimodal = false) {
                     if (chunk.choices && chunk.choices.length > 0) {
                         if (chunk.choices[0].delta && chunk.choices[0].delta.content) {
                             const output = chunk.choices[0].delta.content;
-                            process.stdout.write(output);
+                            console.log(output);
                             content += output;
                         }
                         
                         if (chunk.choices[0].delta && chunk.choices[0].delta.reasoning_content) {
                             const output = chunk.choices[0].delta.reasoning_content;
-                            process.stdout.write(output);
+                            console.log(output);
                             reasoningContent += output;
                         }
                     }
@@ -80,7 +81,7 @@ async function chatWithMemory(messages, isMultimodal = false) {
         }
 
         messages.push({ "role": "assistant", "content": content });
-        return messages;
+        return content;
     } catch (error) {
         console.error("Error fetching API response:", error);
         throw error;

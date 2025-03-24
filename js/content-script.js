@@ -18,7 +18,11 @@ if (shouldModifyPage()) {
     document.addEventListener('keydown', function(e) {
         // Ctrl/Cmd + Shift + S to toggle sidebar
         if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 's') {
-            chrome.runtime.sendMessage({ type: 'OPEN_SIDEBAR' });
+            try {
+    chrome.runtime.sendMessage({ type: 'OPEN_SIDEBAR' });
+} catch (e) {
+    console.warn('Extension context may have been invalidated');
+}
         }
     });
 

@@ -1,8 +1,6 @@
-
 class BuildMessages {
-    constructor(outputDir = "png_images", messages = null) {
-        this.outputDir = outputDir;
-        this.messages = messages || [];
+    constructor() {
+        this.messages = [];
     }
 
     async parsingImage(imagePath) {
@@ -15,7 +13,7 @@ class BuildMessages {
 
             const blob = await response.blob();
             const base64Img = await this.blobToBase64(blob);
-            
+
             this.messages.push({
                 "role": "user",
                 "content": [
@@ -27,7 +25,7 @@ class BuildMessages {
                     }
                 ]
             });
-            
+
             return this.messages;
         } catch (error) {
             console.error(`Error processing image ${imagePath}:`, error);
@@ -49,60 +47,27 @@ class BuildMessages {
 
     async parsingPdf(pdfFile) {
         try {
-            await this.ensureDirectoryExists(this.outputDir);
-            
-            const pdfFilename = pdfFile.name.split('.').slice(0, -1).join('.');
             const pdfData = await pdfFile.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-            
-            for (let pageNum = 0; pageNum < pdf.numPages; pageNum++) {
-                try {
-                    const page = await pdf.getPage(pageNum + 1);
-                    const scale = 2.0;
-                    const viewport = page.getViewport({ scale });
-                    
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.width = viewport.width;
-                    canvas.height = viewport.height;
-                    
-                    const renderContext = {
-                        canvasContext: context,
-                        viewport: viewport
-                    };
-                    
-                    await page.render(renderContext).promise;
-                    
-                    const outputPath = `${this.outputDir}/${pdfFilename}_page${pageNum + 1}.png`;
-                    const imageBlob = await new Promise(resolve => {
-                        canvas.toBlob(resolve, 'image/png');
-                    });
-                    
-                    const imageUrl = URL.createObjectURL(imageBlob);
-                    
-                    console.log(`✅ Saved page ${pageNum + 1}: ${outputPath}`);
-                    
-                    await this.parsingImage(imageUrl);
-                    console.log(`✅ Added page ${pageNum + 1} to message build list`);
-                    
-                    URL.revokeObjectURL(imageUrl);
-                    
-                } catch (error) {
-                    console.error(`❌ Error processing page ${pageNum + 1}: ${error}`);
-                }
+            const pdf = await pdfjsLib.getDocument({data: pdfData}).promise;
+            let text = '';
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                text += content.items.map(item => item.str).join(' ') + '\n';
             }
-            
+
+            this.messages.push({
+                "role": "user",
+                "content": text
+            });
+
             return this.messages;
         } catch (error) {
             console.error("Error parsing PDF:", error);
             return this.messages;
         }
     }
-    
-    async ensureDirectoryExists(dirPath) {
-        console.log(`Ensuring directory exists: ${dirPath}`);
-        return true;
-    }
 }
 
-export { BuildMessages };
+window.BuildMessages = BuildMessages;

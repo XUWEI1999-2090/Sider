@@ -9,9 +9,7 @@
     <link rel="stylesheet" href="css/styles.css">
     <!-- PDF.js 库 -->
     <script src="lib/pdf.js/pdf.min.js"></script>
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.js/pdf.worker.min.js';
-    </script>
+    <script src="js/pdf-config.js"></script>
 </head>
 <body class="sidebar">
     <div class="sidebar-container" style="width: 100%; height: 100vh; padding: 0; margin: 0; overflow: hidden;">
@@ -55,7 +53,7 @@
 
             <!-- Input Area -->
             <div class="chat-input-container">
-                <form id="messageForm" class="message-form" onsubmit="event.preventDefault(); return false;">
+                <form id="messageForm" class="message-form">
                     <div class="input-group">
                         <input 
                             type="text" 

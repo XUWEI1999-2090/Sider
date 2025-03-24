@@ -1,5 +1,4 @@
 import { chatWithMemory } from './api/chat-api.js';
-import { BuildMessages } from './utils/message-builder.js';
 
 class ChatManager {
     constructor() {
@@ -61,16 +60,27 @@ class ChatManager {
                 }
             }
 
+            // 添加附件到用户消息
+            if (this.attachments && this.attachments.length > 0) {
+                userMessage.attachments = [...this.attachments];
+            } else if (window.currentPdfFile) {
+                userMessage.attachments = [{
+                    name: window.currentPdfFile.name,
+                    type: 'pdf',
+                    size: window.currentPdfFile.size
+                }];
+            }
+
             // 添加到会话并保存
             const conversation = this.getConversationById(this.currentConversationId);
             if (conversation) {
                 conversation.messages.push(userMessage);
                 this.saveConversations();
-            }
 
-            // 渲染用户消息
-            this.renderMessage(userMessage);
-            this.chatMessages.appendChild(document.createElement('br'));
+                // 渲染用户消息
+                this.renderMessage(userMessage);
+                this.chatMessages.appendChild(document.createElement('br'));
+            }
 
             // 显示临时消息
             this.renderMessage({
@@ -94,21 +104,37 @@ class ChatManager {
             }
 
             // 获取会话并设置类型
-            const conversation = this.getConversationById(this.currentConversationId);
-            const isMultimodal = hasPdfFile || hasAttachments;
-            if (conversation && isMultimodal) {
+            if (conversation && (hasPdfFile || hasAttachments)) {
                 conversation.modelType = "multimodal";
             }
 
+            // 检查是否为多模态请求
+            const isMultimodal = hasPdfFile || hasAttachments;
+
             // 发送API请求
-            const response = await chatWithMemory(
+            const aiResponse = await chatWithMemory(
                 messageBuilder.messages,
                 isMultimodal
             );
 
-            if (!response) {
+            if (!aiResponse) {
                 throw new Error("API返回了空响应");
             }
+
+            // Add AI response to conversation
+            const aiMessage = {
+                text: aiResponse,
+                sender: "assistant",
+                timestamp: new Date().toISOString()
+            };
+
+            conversation.messages.push(aiMessage);
+            conversation.updatedAt = new Date().toISOString();
+            this.saveConversations();
+            this.renderMessage(aiMessage);
+
+            // Clear input field
+            this.messageInput.value = '';
 
             // 清理临时消息和附件
             this.chatMessages.querySelectorAll(".temporary-message")
@@ -123,17 +149,6 @@ class ChatManager {
                 preview.classList.add('d-none');
             }
 
-            // 添加AI回复
-            const aiMessage = {
-                text: response,
-                sender: "assistant",
-                timestamp: new Date().toISOString()
-            };
-
-            conversation.messages.push(aiMessage);
-            conversation.updatedAt = new Date().toISOString();
-            this.saveConversations();
-            this.renderMessage(aiMessage);
 
         } catch (err) {
             console.error("Error:", err);
@@ -150,35 +165,16 @@ class ChatManager {
 
     loadConversations() {
         try {
-            if (typeof chrome !== 'undefined' && chrome.storage) {
-                chrome.storage.local.get(['conversations', 'currentConversationId'], (result) => {
-                    console.log('Loading from chrome.storage:', result);
-
-                    if (result.conversations && result.conversations.length > 0) {
-                        this.conversations = result.conversations;
-                        const currentId = result.currentConversationId;
-                        if (currentId && this.getConversationById(currentId)) {
-                            this.currentConversationId = currentId;
-                            this.loadCurrentConversation();
-                        } else {
-                            this.currentConversationId = this.conversations[0].id;
-                            this.loadCurrentConversation();
-                        }
-                    }
-                    console.log('Loaded conversations:', this.conversations);
-                });
-            } else {
-                const savedConversations = localStorage.getItem('conversations');
-                if (savedConversations) {
-                    this.conversations = JSON.parse(savedConversations);
-                    const currentId = localStorage.getItem('currentConversationId');
-                    if (currentId && this.getConversationById(currentId)) {
-                        this.currentConversationId = currentId;
-                        this.loadCurrentConversation();
-                    } else if (this.conversations.length > 0) {
-                        this.currentConversationId = this.conversations[0].id;
-                        this.loadCurrentConversation();
-                    }
+            const savedConversations = localStorage.getItem('conversations');
+            if (savedConversations) {
+                this.conversations = JSON.parse(savedConversations);
+                const currentId = localStorage.getItem('currentConversationId');
+                if (currentId && this.getConversationById(currentId)) {
+                    this.currentConversationId = currentId;
+                    this.loadCurrentConversation();
+                } else if (this.conversations.length > 0) {
+                    this.currentConversationId = this.conversations[0].id;
+                    this.loadCurrentConversation();
                 }
             }
         } catch (e) {
@@ -295,11 +291,7 @@ class ChatManager {
     loadCurrentConversation() {
         const conversation = this.getConversationById(this.currentConversationId);
         if (conversation) {
-            if (typeof chrome !== 'undefined' && chrome.storage) {
-                chrome.storage.local.set({'currentConversationId': this.currentConversationId});
-            } else {
-                localStorage.setItem('currentConversationId', this.currentConversationId);
-            }
+            localStorage.setItem('currentConversationId', this.currentConversationId);
             if (this.messageContainer) {
                 this.messageContainer.innerHTML = '';
                 if (conversation.messages && conversation.messages.length > 0) {
@@ -331,11 +323,7 @@ class ChatManager {
             return false;
         }
         this.currentConversationId = id;
-        if (typeof chrome !== 'undefined' && chrome.storage) {
-            chrome.storage.local.set({'currentConversationId': id});
-        } else {
-            localStorage.setItem('currentConversationId', id);
-        }
+        localStorage.setItem('currentConversationId', id);
         const conversationItems = document.querySelectorAll('.conversation-item');
         conversationItems.forEach(item => {
             item.classList.remove('active-conversation');
@@ -378,26 +366,10 @@ class ChatManager {
 
     saveConversations() {
         try {
-            const conversationsToSave = JSON.parse(JSON.stringify(this.conversations));
-            if (typeof chrome !== 'undefined' && chrome.storage) {
-                chrome.storage.local.set({
-                    'conversations': conversationsToSave,
-                    'currentConversationId': this.currentConversationId
-                }, () => {
-                    const dataSize = JSON.stringify(conversationsToSave).length;
-                    console.log(`Saved ${this.conversations.length} conversations to chrome.storage (${dataSize} bytes)`);
-                });
-            } else {
-                localStorage.setItem('conversations', JSON.stringify(conversationsToSave));
-                localStorage.setItem('currentConversationId', this.currentConversationId);
-                const dataSize = JSON.stringify(conversationsToSave).length;
-                console.log(`Saved ${this.conversations.length} conversations to localStorage (${dataSize} bytes)`);
-            }
+            localStorage.setItem('conversations', JSON.stringify(this.conversations));
+            localStorage.setItem('currentConversationId', this.currentConversationId);
         } catch (err) {
             console.error('Error saving conversations:', err);
-            if (err.name === 'QuotaExceededError') {
-                console.warn('Storage quota exceeded. Try clearing some history.');
-            }
         }
     }
 
@@ -431,7 +403,7 @@ class ChatManager {
         if (message.text) {
             const textDiv = document.createElement('div');
             textDiv.className = 'message-text';
-            textDiv.innerHTML = marked.parse(message.text, {
+            textDiv.innerHTML = marked.parse(String(message.text || ''), {
                 breaks: true,
                 gfm: true
             });
@@ -608,14 +580,8 @@ class ChatManager {
     clearHistory() {
         this.conversations = [];
         this.currentConversationId = null;
-        if (typeof chrome !== 'undefined' && chrome.storage) {
-            chrome.storage.local.remove(['conversations', 'currentConversationId'], () => {
-                console.log('Cleared history from chrome.storage');
-            });
-        } else {
-            localStorage.removeItem('conversations');
-            localStorage.removeItem('currentConversationId');
-        }
+        localStorage.removeItem('conversations');
+        localStorage.removeItem('currentConversationId');
         if (this.messageContainer) {
             this.messageContainer.innerHTML = '';
         }
