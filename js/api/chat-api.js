@@ -80,7 +80,7 @@ async function chatWithMemory(messages, isMultimodal = false) {
             }
         }
 
-        messages.push({ "role": "assistant", "content": content });
+        // messages.push({ "role": "assistant", "content": content });
         return content;
     } catch (error) {
         console.error("Error fetching API response:", error);
