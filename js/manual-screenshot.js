@@ -49,6 +49,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // Store screenshot URL
         window.screenshots.push(screenshotUrl);
 
+        // Add to ChatManager attachments
+        if (window.chatManager) {
+            window.chatManager.attachments.push({
+                name: 'Manual Screenshot ' + new Date().toLocaleString(),
+                type: 'image',
+                url: screenshotUrl
+            });
+        }
+
         // Setup remove attachment button
         removeBtn.onclick = () => {
             previewContent.remove();
