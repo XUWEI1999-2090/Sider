@@ -25,12 +25,22 @@ class ChatManager {
         try {
             // 显示用户消息
             const userMessage = {
-                text: prompt,
+                text: prompt || '',
                 attachments: hasAttachments ? this.attachments : [],
                 sender: "user",
                 timestamp: new Date().toISOString()
             };
-            this.addMessage(userMessage);
+            
+            // 先显示用户消息
+            this.renderMessage(userMessage);
+            this.chatMessages.appendChild(document.createElement('br'));
+            
+            // 添加到会话并保存
+            const conversation = this.getConversationById(this.currentConversationId);
+            if (conversation) {
+                conversation.messages.push(userMessage);
+                this.saveConversations();
+            }
 
             // 显示临时消息
             this.renderMessage({
@@ -320,10 +330,16 @@ class ChatManager {
     addMessage(message) {
         const conversation = this.getConversationById(this.currentConversationId);
         if (conversation) {
+            // 先添加到会话消息列表
             conversation.messages.push(message);
             conversation.updatedAt = new Date().toISOString();
-            this.renderMessage(message);
-            this.scrollToBottom();
+            
+            // 确保消息有文本内容
+            if (message.text || message.text === '') {
+                this.renderMessage(message);
+                this.scrollToBottom();
+                this.saveConversations();
+            }
             return true;
         }
         return false;
